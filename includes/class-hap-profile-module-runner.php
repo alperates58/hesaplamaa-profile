@@ -35,15 +35,15 @@ class HAP_Profile_Module_Runner {
 	}
 
 	public static function get_tool_url( $module ) {
-		// Admin'in girdiği URL önceliklidir.
 		if ( ! empty( $module['tool_url'] ) ) {
 			return esc_url_raw( $module['tool_url'] );
 		}
-		// Slug ile WordPress yazısı ara.
+
 		$post = get_page_by_path( sanitize_title( $module['slug'] ), OBJECT, 'post' );
 		if ( $post ) {
 			return get_permalink( $post );
 		}
+
 		return null;
 	}
 
@@ -70,15 +70,11 @@ class HAP_Profile_Module_Runner {
 				$missing[] = $field;
 			}
 		}
+
 		return $missing;
 	}
 
-	/**
-	 * Modülün çalıştırma yeteneğini tespit eder.
-	 * Önce DB'deki runner_type'a bakar, yoksa Suite Inspector'ı kullanır.
-	 */
 	public static function detect_module_capabilities( $module ) {
-		// Admin'in yapılandırdığı runner_type önceliğe sahip.
 		if ( ! empty( $module['runner_type'] ) && 'none' !== $module['runner_type'] ) {
 			return $module['runner_type'];
 		}
@@ -90,7 +86,6 @@ class HAP_Profile_Module_Runner {
 			}
 		}
 
-		// Hesaplama Suite tüm modülleri şu an frontend-only.
 		return 'js_frontend_only';
 	}
 
@@ -110,7 +105,6 @@ class HAP_Profile_Module_Runner {
 			}
 		}
 
-		// Mapping tanımlı değilse required_fields'ı doğrudan aktar.
 		if ( empty( $payload ) ) {
 			$required = json_decode( $module['required_fields'] ?? '[]', true ) ?: array();
 			foreach ( $required as $field ) {
@@ -146,6 +140,26 @@ class HAP_Profile_Module_Runner {
 		return $map[ $state ] ?? '';
 	}
 
+	private static function persist_result( $user_id, $slug, $hash, array $result, $module = array() ) {
+		if ( ! class_exists( 'HAP_Profile_Results_Store' ) ) {
+			return true;
+		}
+
+		$written = HAP_Profile_Results_Store::put( $user_id, $slug, $hash, $result );
+		if ( $written ) {
+			return true;
+		}
+
+		$note = sprintf( 'Result store write failed for module %s and user %d.', $slug, (int) $user_id );
+		error_log( 'HAP_Profile_Module_Runner: ' . $note );
+
+		if ( ! empty( $module['runner_notes'] ) ) {
+			$note .= ' ' . $module['runner_notes'];
+		}
+
+		return $note;
+	}
+
 	// -------------------------------------------------------
 	// Ana çalıştırma metodları
 	// -------------------------------------------------------
@@ -153,21 +167,12 @@ class HAP_Profile_Module_Runner {
 	/**
 	 * Tek bir modülü kullanıcı profil verisiyle çalıştırır.
 	 *
-	 * Öncelik sırası:
-	 *   1. Finans filtresi → filtered_by_profile_policy
-	 *   2. Eksik alan kontrolü → missing_fields
-	 *   3. results_store önbellek (input_hash eşleşirse) → ready_result
-	 *   4. apply_filters('hc_calculate_module') → Suite Calculation API
-	 *   5. legacy php_callback → ready_result
-	 *   6. frontend_only
-	 *
-	 * @param array $module     DB'den gelen modül satırı.
-	 * @param int   $user_id    WP kullanıcı ID.
-	 * @param array $profile    Kullanıcı profil verisi (opsiyonel — verilmezse DB'den çekilir).
-	 * @return array            runner result array.
+	 * @param array      $module  DB'den gelen modül satırı.
+	 * @param int        $user_id WP kullanıcı ID.
+	 * @param array|null $profile Kullanıcı profil verisi.
+	 * @return array
 	 */
 	public static function run_module_for_user( $module, $user_id, $profile = null ) {
-		// 1. Finans/alakasız filtrele.
 		if ( ! self::is_profile_relevant( $module ) ) {
 			return array(
 				'module'   => $module,
@@ -179,14 +184,12 @@ class HAP_Profile_Module_Runner {
 			);
 		}
 
-		// Profil verisini al.
 		if ( null === $profile ) {
 			$fields_obj = new HAP_Profile_Fields();
 			$ud         = new HAP_Profile_User_Data( $fields_obj );
 			$profile    = $ud->get_user_profile_data( $user_id );
 		}
 
-		// 2. Eksik alan kontrolü.
 		$missing = self::get_missing_fields( $module, $profile );
 		if ( ! empty( $missing ) ) {
 			return array(
@@ -203,10 +206,9 @@ class HAP_Profile_Module_Runner {
 		$payload = self::build_payload_for_module( $module, $profile );
 		$hash    = md5( serialize( $payload ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
-		// 3. Önbellekten oku.
 		if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
 			$cached = HAP_Profile_Results_Store::get( $user_id, $slug, $hash );
-			if ( null !== $cached && ! empty( $cached['success'] ) ) {
+			if ( null !== $cached && ( ! empty( $cached['success'] ) || 'ready_result' === ( $cached['status'] ?? '' ) ) ) {
 				return array(
 					'module'   => $module,
 					'state'    => 'ready_result',
@@ -219,15 +221,18 @@ class HAP_Profile_Module_Runner {
 			}
 		}
 
-		// 4. Hesaplama Suite Calculation API (apply_filters).
 		if ( has_filter( 'hc_calculate_module' ) ) {
 			try {
 				$api_result = apply_filters( 'hc_calculate_module', null, $slug, $payload );
 				if ( is_array( $api_result ) && ! empty( $api_result['success'] ) ) {
-					// Önbelleğe kaydet.
-					if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
-						HAP_Profile_Results_Store::put( $user_id, $slug, $hash, $api_result );
+					if ( empty( $api_result['status'] ) ) {
+						$api_result['status'] = 'ready_result';
 					}
+					$store_note = self::persist_result( $user_id, $slug, $hash, $api_result, $module );
+					if ( is_string( $store_note ) ) {
+						$api_result['runner_note'] = $store_note;
+					}
+
 					return array(
 						'module'   => $module,
 						'state'    => 'ready_result',
@@ -238,10 +243,9 @@ class HAP_Profile_Module_Runner {
 						'cached'   => false,
 					);
 				}
-				// API başarısız döndü — unsupported veya hata olabilir.
+
 				if ( is_array( $api_result ) && isset( $api_result['error_code'] ) ) {
 					$error_code = $api_result['error_code'];
-					// "unsupported_backend_calculation" → frontend_only gibi davran.
 					if ( 'unsupported_backend_calculation' === $error_code ) {
 						return array(
 							'module'   => $module,
@@ -254,7 +258,6 @@ class HAP_Profile_Module_Runner {
 					}
 				}
 			} catch ( Exception $e ) {
-				// Calculation API istisnası — runner_error olarak dön.
 				return array(
 					'module'   => $module,
 					'state'    => 'runner_error',
@@ -266,7 +269,6 @@ class HAP_Profile_Module_Runner {
 			}
 		}
 
-		// 5. Legacy PHP callback (admin tarafından elle ayarlananlar).
 		$capability = self::detect_module_capabilities( $module );
 		if ( 'php_callback' === $capability && ! empty( $module['runner_callback'] ) ) {
 			$cb = $module['runner_callback'];
@@ -274,10 +276,16 @@ class HAP_Profile_Module_Runner {
 				try {
 					$raw = call_user_func( $cb, $payload );
 					if ( ! empty( $raw ) ) {
-						$normalized = self::normalize_result( $module, $raw );
-						if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
-							HAP_Profile_Results_Store::put( $user_id, $slug, $hash, $normalized );
+						$normalized                 = self::normalize_result( $module, $raw );
+						$stored_value               = $normalized;
+						$stored_value['status']     = 'ready_result';
+						$stored_value['raw_result'] = $raw;
+						$stored_value['normalized_result'] = $normalized;
+						$store_note                 = self::persist_result( $user_id, $slug, $hash, $stored_value, $module );
+						if ( is_string( $store_note ) ) {
+							$normalized['runner_note'] = $store_note;
 						}
+
 						return array(
 							'module'   => $module,
 							'state'    => 'ready_result',
@@ -300,7 +308,6 @@ class HAP_Profile_Module_Runner {
 			}
 		}
 
-		// 6. Hesaplama Suite frontend-only (JS hesaplıyor, backend API yokken).
 		return array(
 			'module'   => $module,
 			'state'    => 'frontend_only',
@@ -314,12 +321,36 @@ class HAP_Profile_Module_Runner {
 	/**
 	 * Belirtilen modül listesini kullanıcı için toplu çalıştırır.
 	 *
-	 * @param int   $user_id
-	 * @param array $modules  profile_core/profile_optional modüller (zaten filtrelenmiş).
-	 * @param array $profile  Kullanıcı profil verisi.
-	 * @return array          runner results — keyed by module slug.
+	 * @param int        $user_id
+	 * @param array|null $modules
+	 * @param array|null $profile
+	 * @return array
 	 */
-	public static function run_modules_for_user( $user_id, array $modules, array $profile ) {
+	public static function run_modules_for_user( $user_id, $modules = null, $profile = null ) {
+		if ( null === $modules ) {
+			$modules_obj = new HAP_Profile_Modules();
+			$modules     = $modules_obj->get_modules(
+				array(
+					'availability_status' => 'active',
+					'limit'               => 500,
+				)
+			);
+			$modules     = array_values(
+				array_filter(
+					$modules,
+					function ( $module ) {
+						return in_array( $module['profile_status'], array( 'profile_core', 'profile_optional' ), true );
+					}
+				)
+			);
+		}
+
+		if ( null === $profile ) {
+			$fields_obj = new HAP_Profile_Fields();
+			$ud         = new HAP_Profile_User_Data( $fields_obj );
+			$profile    = $ud->get_user_profile_data( $user_id );
+		}
+
 		$results = array();
 		foreach ( $modules as $module ) {
 			$results[ $module['slug'] ] = self::run_module_for_user( $module, $user_id, $profile );
@@ -331,87 +362,94 @@ class HAP_Profile_Module_Runner {
 	// MVP Mapping Presetleri
 	// -------------------------------------------------------
 
-	/**
-	 * İlk geliştirme aşamasında bilinen modüller için input_mapping ve
-	 * required_fields preset verisi döner.
-	 * Bu metod DB'ye kayıt yapmaz — admin AJAX çağrısında kullanılır.
-	 */
 	public static function get_preset_mappings() {
 		return array(
 			'burc-dogum-araligi-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'birth_date' ),
-				'input_mapping' => json_encode( array( 'birth_date' => 'dogum_tarihi' ) ),
-				'runner_notes'  => 'Burç doğum aralığı; JS hesaplıyor. birth_date yeterli.',
+				'input_mapping'   => json_encode( array( 'birth_date' => 'dogum_tarihi' ) ),
+				'runner_notes'    => 'Burç doğum aralığı; JS hesaplıyor. birth_date yeterli.',
 			),
 			'ay-burcu-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'birth_date', 'birth_time', 'birth_place' ),
-				'input_mapping' => json_encode( array(
-					'birth_date'  => 'dogum_tarihi',
-					'birth_time'  => 'dogum_saati',
-					'birth_place' => 'dogum_yeri',
-				) ),
-				'runner_notes'  => 'Ay burcu hesaplama; JS. Doğum saati ve yeri zorunlu.',
+				'input_mapping'   => json_encode(
+					array(
+						'birth_date'  => 'dogum_tarihi',
+						'birth_time'  => 'dogum_saati',
+						'birth_place' => 'dogum_yeri',
+					)
+				),
+				'runner_notes'    => 'Ay burcu hesaplama; JS. Doğum saati ve yeri zorunlu.',
 			),
 			'burc-ve-ev-yerlesimi-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'birth_date', 'birth_time', 'birth_place' ),
-				'input_mapping' => json_encode( array(
-					'birth_date'  => 'dogum_tarihi',
-					'birth_time'  => 'dogum_saati',
-					'birth_place' => 'dogum_yeri',
-				) ),
-				'runner_notes'  => 'Ev yerleşimi; JS. Doğum saati ve yeri zorunlu.',
+				'input_mapping'   => json_encode(
+					array(
+						'birth_date'  => 'dogum_tarihi',
+						'birth_time'  => 'dogum_saati',
+						'birth_place' => 'dogum_yeri',
+					)
+				),
+				'runner_notes'    => 'Ev yerleşimi; JS. Doğum saati ve yeri zorunlu.',
 			),
 			'ay-fazi-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'birth_date' ),
-				'input_mapping' => json_encode( array( 'birth_date' => 'dogum_tarihi' ) ),
-				'runner_notes'  => 'Ay fazı; JS. birth_date yeterli.',
+				'input_mapping'   => json_encode( array( 'birth_date' => 'dogum_tarihi' ) ),
+				'runner_notes'    => 'Ay fazı; JS. birth_date yeterli.',
 			),
 			'adimdan-kaloriye-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'weight', 'daily_steps' ),
-				'input_mapping' => json_encode( array(
-					'weight'      => 'kilo',
-					'daily_steps' => 'adim',
-				) ),
-				'runner_notes'  => 'Adımdan kaloriye; JS. Kilo ve günlük adım gerekli.',
+				'input_mapping'   => json_encode(
+					array(
+						'weight'      => 'kilo',
+						'daily_steps' => 'adim',
+					)
+				),
+				'runner_notes'    => 'Adımdan kaloriye; JS. Kilo ve günlük adım gerekli.',
 			),
 			'gunluk-adim-hedefi-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'weight', 'activity_level' ),
-				'input_mapping' => json_encode( array(
-					'weight'         => 'kilo',
-					'activity_level' => 'aktivite',
-				) ),
-				'runner_notes'  => 'Günlük adım hedefi; JS. Kilo ve aktivite gerekli.',
+				'input_mapping'   => json_encode(
+					array(
+						'weight'         => 'kilo',
+						'activity_level' => 'aktivite',
+					)
+				),
+				'runner_notes'    => 'Günlük adım hedefi; JS. Kilo ve aktivite gerekli.',
 			),
 			'bel-kalca-orani-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'height', 'weight', 'gender' ),
-				'input_mapping' => json_encode( array(
-					'height' => 'boy',
-					'weight' => 'kilo',
-					'gender' => 'cinsiyet',
-				) ),
-				'runner_notes'  => 'Bel-kalça oranı; JS. Boy, kilo, cinsiyet gerekli.',
+				'input_mapping'   => json_encode(
+					array(
+						'height' => 'boy',
+						'weight' => 'kilo',
+						'gender' => 'cinsiyet',
+					)
+				),
+				'runner_notes'    => 'Bel-kalça oranı; JS. Boy, kilo, cinsiyet gerekli.',
 			),
 			'vucut-kitle-indeksi-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'height', 'weight' ),
-				'input_mapping' => json_encode( array(
-					'height' => 'boy',
-					'weight' => 'kilo',
-				) ),
-				'runner_notes'  => 'VKİ hesaplama; JS. Boy ve kilo yeterli.',
+				'input_mapping'   => json_encode(
+					array(
+						'height' => 'boy',
+						'weight' => 'kilo',
+					)
+				),
+				'runner_notes'    => 'VKİ hesaplama; JS. Boy ve kilo yeterli.',
 			),
 			'90-dakikalik-uyku-dongusu-hesaplama' => array(
-				'runner_type'   => 'js_frontend_only',
+				'runner_type'     => 'js_frontend_only',
 				'required_fields' => array( 'sleep_hours' ),
-				'input_mapping' => json_encode( array( 'sleep_hours' => 'uyku_saati' ) ),
-				'runner_notes'  => '90 dk uyku döngüsü; JS. sleep_hours gerekli.',
+				'input_mapping'   => json_encode( array( 'sleep_hours' => 'uyku_saati' ) ),
+				'runner_notes'    => '90 dk uyku döngüsü; JS. sleep_hours gerekli.',
 			),
 		);
 	}

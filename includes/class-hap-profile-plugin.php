@@ -45,9 +45,7 @@ class HAP_Profile_Plugin {
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-module-runner.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-results-store.php';
 
-		// DB migrasyonunu versiyon değişiminde çalıştır.
-		$db_version = get_option( 'hap_profile_db_version', '0' );
-		if ( version_compare( $db_version, HAP_VERSION, '<' ) ) {
+		if ( HAP_Profile_Activator::should_run_migrations() ) {
 			HAP_Profile_Activator::run_migrations();
 		}
 
