@@ -12,6 +12,7 @@ class HAP_Profile_Plugin {
 	private $user_data;
 	private $render;
 	private $share;
+	private $onboarding;
 	private $ai_templates;
 	private $health;
 	private $admin;
@@ -32,6 +33,7 @@ class HAP_Profile_Plugin {
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-fields.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-modules.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-user-data.php';
+		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-onboarding.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-share.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-render.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-ai-templates.php';
@@ -43,8 +45,9 @@ class HAP_Profile_Plugin {
 		$this->fields       = new HAP_Profile_Fields();
 		$this->modules      = new HAP_Profile_Modules();
 		$this->user_data    = new HAP_Profile_User_Data( $this->fields );
+		$this->onboarding   = new HAP_Profile_Onboarding( $this->fields, $this->user_data );
 		$this->share        = new HAP_Profile_Share();
-		$this->render       = new HAP_Profile_Render( $this->fields, $this->modules, $this->user_data, $this->share );
+		$this->render       = new HAP_Profile_Render( $this->fields, $this->modules, $this->user_data, $this->share, $this->onboarding );
 		$this->ai_templates = new HAP_Profile_AI_Templates();
 		$this->health       = new HAP_Profile_Health( $this->modules );
 		$this->auth         = new HAP_Profile_Auth();
@@ -72,6 +75,7 @@ class HAP_Profile_Plugin {
 		add_filter( 'wp_robots', array( $this->render, 'add_noindex' ) );
 
 		add_action( 'wp_ajax_hap_save_profile', array( $this->render, 'handle_save_profile' ) );
+		add_action( 'wp_ajax_hap_save_onboarding_step', array( $this->onboarding, 'handle_save_step' ) );
 		add_action( 'admin_post_hap_save_profile', array( $this->render, 'handle_save_profile_post' ) );
 		add_action( 'wp_ajax_hap_create_share', array( $this->render, 'handle_create_share' ) );
 		add_action( 'wp_ajax_hap_revoke_share', array( $this->render, 'handle_revoke_share' ) );

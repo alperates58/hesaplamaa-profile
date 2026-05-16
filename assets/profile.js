@@ -6,6 +6,7 @@
 		init: function () {
 			this.initFormTabs();
 			this.initProfileSave();
+			this.initOnboarding();
 			this.initShare();
 			this.initScrollLinks();
 			this.initCopyButtons();
@@ -38,19 +39,7 @@
 					profile_data: HAP.extractProfileData($form)
 				}, function (res) {
 					if (res.success) {
-						const completion = res.data && res.data.completion !== undefined ? parseInt(res.data.completion, 10) : null;
 						$msg.text(hapProfile.i18n.saved);
-
-						if (completion !== null && !Number.isNaN(completion)) {
-							$('.hap-progress-fill').css('width', completion + '%');
-							$('.hap-progress-chip').text('%' + completion);
-							$('.hap-progress-meta strong').text('Profil tamamlama: %' + completion);
-							$('.hap-progress-meta span').first().text(
-								completion > 0
-									? 'Bilgilerin tamamlandikca daha fazla analiz acilir.'
-									: 'Baslamak icin temel bilgilerini ekle.'
-							);
-						}
 					} else {
 						$msg.addClass('error').text(hapProfile.i18n.error);
 					}
@@ -61,6 +50,107 @@
 					$btn.prop('disabled', false).text('Profili Kaydet');
 				});
 			});
+		},
+
+		initOnboarding: function () {
+			$(document).on('click', '[data-step-target]', function () {
+				const stepId = $(this).data('stepTarget');
+				HAP.activateOnboardingStep(stepId);
+			});
+
+			$(document).on('click', '[data-step-back]', function () {
+				const currentStep = $(this).data('stepBack');
+				const $panel = $('[data-step-panel="' + currentStep + '"]');
+				const currentIndex = parseInt($panel.data('stepIndex'), 10);
+				const $target = $('.hap-onboarding-panel[data-step-index="' + (currentIndex - 1) + '"]');
+				if ($target.length) {
+					HAP.activateOnboardingStep($target.data('stepPanel'));
+				}
+			});
+
+			$(document).on('click', '[data-step-skip]', function () {
+				const currentStep = $(this).data('stepSkip');
+				const $panel = $('[data-step-panel="' + currentStep + '"]');
+				const currentIndex = parseInt($panel.data('stepIndex'), 10);
+				const $target = $('.hap-onboarding-panel[data-step-index="' + (currentIndex + 1) + '"]');
+				if ($target.length) {
+					HAP.activateOnboardingStep($target.data('stepPanel'));
+				}
+			});
+
+			$(document).on('click', '[data-step-save]', function () {
+				const stepId = $(this).data('stepSave');
+				const $panel = $('[data-step-panel="' + stepId + '"]');
+				const $form = $panel.find('[data-step-form="' + stepId + '"]');
+				const $feedback = $panel.find('.hap-onboarding-feedback');
+				const $button = $(this);
+				$button.prop('disabled', true).text(hapProfile.i18n.saving);
+				$feedback.removeClass('is-error is-success').text('');
+
+				$.post(hapProfile.ajaxUrl, {
+					action: 'hap_save_onboarding_step',
+					nonce: hapProfile.nonce,
+					step: stepId,
+					profile_data: HAP.extractProfileData($form)
+				}, function (res) {
+					if (!res.success) {
+						const message = res.data && res.data.message ? res.data.message : hapProfile.i18n.error;
+						$feedback.addClass('is-error').text(message);
+						$button.prop('disabled', false).text(HAP.getStepButtonText(stepId));
+						return;
+					}
+
+					const nextStep = res.data && res.data.next_step ? res.data.next_step : 'complete';
+					const minimumCompletion = res.data && res.data.minimum_completion !== undefined ? parseInt(res.data.minimum_completion, 10) : null;
+
+					$feedback.addClass('is-success').text('Kaydedildi. Sonraki adima geciliyor.');
+					if (minimumCompletion !== null && !Number.isNaN(minimumCompletion)) {
+						HAP.updateOnboardingProgress(nextStep, minimumCompletion);
+					}
+					HAP.activateOnboardingStep(nextStep);
+
+					$button.prop('disabled', false).text(HAP.getStepButtonText(stepId));
+				}).fail(function () {
+					$feedback.addClass('is-error').text(hapProfile.i18n.error);
+					$button.prop('disabled', false).text(HAP.getStepButtonText(stepId));
+				});
+			});
+		},
+
+		activateOnboardingStep: function (stepId) {
+			const $shell = $('.hap-onboarding-shell');
+			const $panel = $('[data-step-panel="' + stepId + '"]');
+			if (!$shell.length || !$panel.length) {
+				return;
+			}
+
+			$('[data-step-panel]').removeClass('is-active');
+			$panel.addClass('is-active');
+
+			$('[data-step-target]').removeClass('is-active').attr('aria-selected', 'false');
+			$('[data-step-target="' + stepId + '"]').addClass('is-active').attr('aria-selected', 'true');
+
+			HAP.updateOnboardingProgress(stepId);
+		},
+
+		updateOnboardingProgress: function (stepId) {
+			const $panel = $('[data-step-panel="' + stepId + '"]');
+			if (!$panel.length) {
+				return;
+			}
+
+			const index = parseInt($panel.data('stepIndex'), 10);
+			const total = $('[data-step-panel]').length - 1;
+			const percent = total > 0 ? Math.round((index / total) * 100) : 0;
+
+			$('[data-onboarding-progress-fill]').css('width', percent + '%');
+			$('[data-onboarding-progress-label]').text('%' + percent);
+			$('[data-onboarding-step-label]').text('Adim ' + (index + 1) + ' / ' + $('[data-step-panel]').length);
+		},
+
+		getStepButtonText: function (stepId) {
+			const $button = $('[data-step-save="' + stepId + '"]');
+			return $button.data('originalText') || $button.text() || 'Kaydet';
 		},
 
 		extractProfileData: function ($form) {
@@ -175,6 +265,9 @@
 	};
 
 	$(document).ready(function () {
+		$('[data-step-save]').each(function () {
+			$(this).attr('data-original-text', $(this).text());
+		});
 		HAP.init();
 	});
 }(jQuery));

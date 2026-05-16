@@ -9,6 +9,21 @@ class HAP_Profile_User_Data {
 
 	private $fields;
 
+	private static $minimum_profile_keys = array( 'nickname', 'birth_date', 'gender', 'city' );
+
+	private static $section_required_fallbacks = array(
+		'overview'          => array( 'birth_date' ),
+		'astrology'         => array( 'birth_date' ),
+		'astrology_houses'  => array( 'birth_date', 'birth_time', 'birth_place' ),
+		'moon_sky'          => array( 'birth_date', 'birth_time', 'birth_place' ),
+		'health_lifestyle'  => array( 'height', 'weight', 'activity_level' ),
+		'sport_activity'    => array( 'height', 'weight', 'activity_level' ),
+		'numerology'        => array( 'first_name', 'last_name' ),
+		'chinese_astrology' => array( 'birth_date' ),
+		'symbolic'          => array( 'birth_date' ),
+		'tarot'             => array( 'birth_date' ),
+	);
+
 	private static $sensitive_keys = array(
 		'birth_time', 'birth_place', 'phone_number', 'plate_number',
 		'home_number', 'company_name', 'baby_name', 'partner_birth_date',
@@ -138,11 +153,8 @@ class HAP_Profile_User_Data {
 	}
 
 	public function get_missing_fields_for_module( array $module, array $profile_data ) {
-		$req = $module['required_fields'];
-		if ( ! is_array( $req ) ) {
-			$req = json_decode( $req, true );
-		}
-		if ( ! is_array( $req ) || empty( $req ) ) {
+		$req = $this->get_effective_required_fields( $module );
+		if ( empty( $req ) ) {
 			return array();
 		}
 		$missing = array();
@@ -192,6 +204,117 @@ class HAP_Profile_User_Data {
 			'filled_fields' => $filled,
 			'total_fields'  => count( $active ),
 		);
+	}
+
+	public function get_profile_display_name( $user_id, array $profile_data = array() ) {
+		$nickname = isset( $profile_data['nickname'] ) ? $profile_data['nickname'] : $this->get_field_value( $user_id, 'nickname' );
+		if ( '' !== (string) $nickname ) {
+			return $nickname;
+		}
+
+		$wp_user = get_userdata( absint( $user_id ) );
+		if ( $wp_user && ! empty( $wp_user->display_name ) ) {
+			return $wp_user->display_name;
+		}
+
+		return '';
+	}
+
+	public function get_minimum_profile_keys() {
+		return self::$minimum_profile_keys;
+	}
+
+	public function get_minimum_profile_missing_fields( $user_id, array $profile_data = array() ) {
+		$user_id = absint( $user_id );
+		if ( empty( $profile_data ) ) {
+			$profile_data = $this->get_user_profile_data( $user_id );
+		}
+
+		$missing = array();
+		foreach ( self::$minimum_profile_keys as $key ) {
+			if ( 'nickname' === $key ) {
+				if ( '' === $this->get_profile_display_name( $user_id, $profile_data ) ) {
+					$missing[] = $key;
+				}
+				continue;
+			}
+
+			if ( ! $this->is_field_filled( $key, $profile_data ) ) {
+				$missing[] = $key;
+			}
+		}
+
+		return $missing;
+	}
+
+	public function is_minimum_profile_complete( $user_id, array $profile_data = array() ) {
+		return empty( $this->get_minimum_profile_missing_fields( $user_id, $profile_data ) );
+	}
+
+	public function get_minimum_profile_completion( $user_id, array $profile_data = array() ) {
+		$user_id = absint( $user_id );
+		if ( empty( $profile_data ) ) {
+			$profile_data = $this->get_user_profile_data( $user_id );
+		}
+
+		$filled = count( self::$minimum_profile_keys ) - count( $this->get_minimum_profile_missing_fields( $user_id, $profile_data ) );
+		return (int) round( ( $filled / count( self::$minimum_profile_keys ) ) * 100 );
+	}
+
+	public function get_analysis_required_fields( array $modules ) {
+		$required = array();
+		foreach ( $modules as $module ) {
+			if ( ! in_array( $module['profile_status'], array( 'profile_core', 'profile_optional' ), true ) ) {
+				continue;
+			}
+
+			foreach ( $this->get_effective_required_fields( $module ) as $field_key ) {
+				$required[ $field_key ] = true;
+			}
+		}
+
+		return array_keys( $required );
+	}
+
+	public function get_analysis_preparation_stats( $user_id, array $modules, array $profile_data = array() ) {
+		$user_id = absint( $user_id );
+		if ( empty( $profile_data ) ) {
+			$profile_data = $this->get_user_profile_data( $user_id );
+		}
+
+		$required = $this->get_analysis_required_fields( $modules );
+		$filled   = 0;
+		foreach ( $required as $field_key ) {
+			if ( $this->is_field_filled( $field_key, $profile_data ) ) {
+				$filled++;
+			}
+		}
+
+		$total = count( $required );
+		return array(
+			'percentage' => $total > 0 ? (int) round( ( $filled / $total ) * 100 ) : 100,
+			'filled'     => $filled,
+			'total'      => $total,
+			'fields'     => $required,
+		);
+	}
+
+	public function get_effective_required_fields( array $module ) {
+		$req = $module['required_fields'];
+		if ( ! is_array( $req ) ) {
+			$req = json_decode( $req, true );
+		}
+		if ( ! is_array( $req ) ) {
+			$req = array();
+		}
+
+		$req = array_values( array_filter( array_map( 'sanitize_key', $req ) ) );
+		if ( ! empty( $req ) ) {
+			return $req;
+		}
+
+		$section = sanitize_key( $module['section'] ?? '' );
+		return self::$section_required_fallbacks[ $section ] ?? array();
 	}
 
 	public function get_dashboard_module_stats( array $modules, array $profile_data ) {

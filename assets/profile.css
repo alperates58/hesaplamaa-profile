@@ -976,11 +976,283 @@
 		width: 100%;
 	}
 
-	.hap-profile-app .hap-module-item,
+.hap-profile-app .hap-module-item,
 	.hap-profile-app .hap-hero-actions,
 	.hap-profile-app .hap-form-footer,
 	.hap-profile-app .hap-login-actions,
 	.hap-profile-app .hap-share-url-row {
 		flex-direction: column;
+	}
+}
+
+.hap-profile-app .hap-dashboard-hero,
+.hap-profile-app .hap-onboarding-hero,
+.hap-profile-app .hap-onboarding-card,
+.hap-profile-app .hap-summary-card,
+.hap-profile-app .hap-analysis-card,
+.hap-profile-app .hap-result-card,
+.hap-profile-app .hap-related-tool {
+	background: var(--hap-card-bg);
+	border: 1px solid var(--hap-border);
+	border-radius: var(--hap-radius-lg);
+	box-shadow: var(--hap-shadow);
+}
+
+.hap-profile-app .hap-summary-layout,
+.hap-profile-app .hap-analysis-card-grid,
+.hap-profile-app .hap-results-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 20px;
+}
+
+.hap-profile-app .hap-onboarding-shell,
+.hap-profile-app .hap-tools-area,
+.hap-profile-app .hap-results-area {
+	display: grid;
+	gap: 24px;
+}
+
+.hap-profile-app .hap-onboarding-hero,
+.hap-profile-app .hap-onboarding-card,
+.hap-profile-app .hap-summary-card,
+.hap-profile-app .hap-analysis-card,
+.hap-profile-app .hap-result-card,
+.hap-profile-app .hap-related-tool,
+.hap-profile-app .hap-progress-card {
+	padding: 24px;
+}
+
+.hap-profile-app .hap-onboarding-hero {
+	display: grid;
+	grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);
+	gap: 24px;
+}
+
+.hap-profile-app .hap-onboarding-hero-stats,
+.hap-profile-app .hap-progress-cluster,
+.hap-profile-app .hap-onboarding-panels {
+	display: grid;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-onboarding-stat {
+	padding: 18px;
+	border-radius: 18px;
+	background: #fff7f7;
+	border: 1px solid #ffe1e2;
+}
+
+.hap-profile-app .hap-onboarding-stat strong,
+.hap-profile-app .hap-onboarding-why strong,
+.hap-profile-app .hap-related-tool strong,
+.hap-profile-app .hap-result-card h3 {
+	display: block;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-onboarding-stat span,
+.hap-profile-app .hap-related-tool span,
+.hap-profile-app .hap-result-card-copy,
+.hap-profile-app .hap-result-card-detail,
+.hap-profile-app .hap-analysis-card-message {
+	color: var(--hap-text-muted);
+	line-height: 1.6;
+}
+
+.hap-profile-app .hap-onboarding-steps {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 12px;
+	margin: 22px 0 10px;
+}
+
+.hap-profile-app .hap-onboarding-step-pill {
+	display: grid;
+	gap: 8px;
+	text-align: left;
+	padding: 14px 16px;
+	border: 1px solid var(--hap-border);
+	border-radius: 18px;
+	background: #fff;
+	cursor: pointer;
+}
+
+.hap-profile-app .hap-onboarding-step-pill.is-active {
+	border-color: #ffc8ca;
+	box-shadow: 0 10px 20px rgba(255, 90, 95, 0.12);
+}
+
+.hap-profile-app .hap-onboarding-step-no {
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--hap-cta);
+}
+
+.hap-profile-app .hap-onboarding-step-text {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-onboarding-panel {
+	display: none;
+	gap: 20px;
+}
+
+.hap-profile-app .hap-onboarding-panel.is-active {
+	display: grid;
+}
+
+.hap-profile-app .hap-onboarding-panel-head,
+.hap-profile-app .hap-analysis-card-top,
+.hap-profile-app .hap-result-card-head {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	align-items: flex-start;
+}
+
+.hap-profile-app .hap-onboarding-why {
+	padding: 18px;
+	border-radius: 18px;
+	background: linear-gradient(180deg, #fff8f8 0%, #fff 100%);
+	border: 1px solid #ffe1e2;
+}
+
+.hap-profile-app .hap-onboarding-why p,
+.hap-profile-app .hap-section-card-copy,
+.hap-profile-app .hap-result-card h3,
+.hap-profile-app .hap-related-tool strong {
+	margin: 0;
+}
+
+.hap-profile-app .hap-onboarding-feedback {
+	min-height: 24px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.hap-profile-app .hap-onboarding-feedback.is-error {
+	color: #b91c1c;
+}
+
+.hap-profile-app .hap-onboarding-feedback.is-success {
+	color: #027a48;
+}
+
+.hap-profile-app .hap-onboarding-actions,
+.hap-profile-app .hap-analysis-card-actions,
+.hap-profile-app .hap-result-card-actions {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.hap-profile-app .hap-summary-card {
+	display: grid;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-suggestion-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.hap-profile-app .hap-missing-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: 8px 12px;
+	border-radius: 999px;
+	background: #fff4f4;
+	color: #b42318;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.hap-profile-app .hap-missing-chip.is-ready {
+	background: var(--hap-success-bg);
+	color: var(--hap-success-text);
+}
+
+.hap-profile-app .hap-analysis-card {
+	display: grid;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-analysis-card-head {
+	display: grid;
+	gap: 6px;
+	flex: 1;
+}
+
+.hap-profile-app .hap-analysis-card-meta {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.hap-profile-app .hap-results-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hap-profile-app .hap-result-card {
+	display: grid;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-result-card.is-ready {
+	background: linear-gradient(180deg, #fff 0%, #f7fff9 100%);
+}
+
+.hap-profile-app .hap-result-card.is-locked {
+	background: linear-gradient(180deg, #fff 0%, #fff9f7 100%);
+}
+
+.hap-profile-app .hap-result-link {
+	color: var(--hap-cta);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.hap-profile-app .hap-related-tools {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.hap-profile-app .hap-related-tool {
+	display: flex;
+	justify-content: space-between;
+	gap: 14px;
+	align-items: center;
+	padding: 18px 20px;
+}
+
+.hap-profile-app .hap-progress-card {
+	padding: 18px;
+	border: 1px solid #eef2f7;
+	border-radius: 18px;
+	background: #f8fafc;
+}
+
+.hap-profile-app .hap-onboarding-complete {
+	display: grid;
+	gap: 18px;
+	max-width: 640px;
+}
+
+@media (max-width: 980px) {
+	.hap-profile-app .hap-onboarding-hero,
+	.hap-profile-app .hap-summary-layout,
+	.hap-profile-app .hap-analysis-card-grid,
+	.hap-profile-app .hap-results-grid,
+	.hap-profile-app .hap-related-tools {
+		grid-template-columns: 1fr;
+	}
+
+	.hap-profile-app .hap-onboarding-steps {
+		grid-template-columns: 1fr;
 	}
 }

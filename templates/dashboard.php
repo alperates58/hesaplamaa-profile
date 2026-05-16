@@ -3,94 +3,152 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 /**
- * @var int                   $user_id
- * @var HAP_Profile_Fields    $fields
- * @var HAP_Profile_Modules   $modules
- * @var HAP_Profile_User_Data $user_data
- * @var HAP_Profile_Share     $share
- * @var array                 $settings
+ * @var int                    $user_id
+ * @var HAP_Profile_Fields     $fields
+ * @var HAP_Profile_Modules    $modules
+ * @var HAP_Profile_User_Data  $user_data
+ * @var HAP_Profile_Share      $share
+ * @var HAP_Profile_Render     $render
+ * @var array                  $settings
  */
 
-$wp_user    = get_userdata( $user_id );
-$profile    = $user_data->get_user_profile_data( $user_id );
-$completion = $user_data->get_completion_percentage( $user_id );
-$nickname   = $user_data->get_field_value( $user_id, 'nickname' ) ?: $wp_user->display_name;
-$dash_stats = $user_data->get_dashboard_stats( $user_id );
-
-$sections_config = array(
-	'astrology'         => array(
-		'label'       => 'Astroloji',
-		'icon'        => 'As',
-		'description' => 'Dogum bilgilerine gore temel astrolojik analizlerin.',
-	),
-	'astrology_houses'  => array(
-		'label'       => 'Astroloji Evleri',
-		'icon'        => 'Ev',
-		'description' => 'Ev yerlesimleri ve yasam alanlarina odaklanan yorumlar.',
-	),
-	'moon_sky'          => array(
-		'label'       => 'Ay & Gokyuzu',
-		'icon'        => 'Ay',
-		'description' => 'Ay fazlari, gokyuzu ritmi ve duygusal akislara dair modul seti.',
-	),
-	'health_lifestyle'  => array(
-		'label'       => 'Saglik & Yasam',
-		'icon'        => 'Sy',
-		'description' => 'Gunluk rutin, saglik ve yasam kalitesi odakli analizler.',
-	),
-	'sport_activity'    => array(
-		'label'       => 'Spor & Aktivite',
-		'icon'        => 'Sp',
-		'description' => 'Aktivite, performans ve hareket aliskanliklarina dair ozetler.',
-	),
-	'numerology'        => array(
-		'label'       => 'Numeroloji',
-		'icon'        => 'Nu',
-		'description' => 'Sayi temelli karakter ve donemsel enerjileri kesfet.',
-	),
-	'symbolic'          => array(
-		'label'       => 'Sembolik',
-		'icon'        => 'Se',
-		'description' => 'Simgesel anlamlar ve gunluk yorumlarla desteklenen alanlar.',
-	),
-	'tarot'             => array(
-		'label'       => 'Tarot',
-		'icon'        => 'Ta',
-		'description' => 'Kart temelli sezgisel rehberlik ve farkindalik modulleri.',
-	),
-	'chinese_astrology' => array(
-		'label'       => 'Cin Astrolojisi',
-		'icon'        => 'Ca',
-		'description' => 'Cin astrolojisi ekseninde donemsel ve karakter analizleri.',
-	),
-);
-
-$all_modules = $modules->get_modules(
+$profile               = $user_data->get_user_profile_data( $user_id );
+$nickname              = $user_data->get_profile_display_name( $user_id, $profile );
+$section_config        = $render->get_sections_config();
+$current_page_url      = $render->get_current_page_url();
+$minimum_completion    = $user_data->get_minimum_profile_completion( $user_id, $profile );
+$minimum_missing       = $user_data->get_minimum_profile_missing_fields( $user_id, $profile );
+$field_labels          = $user_data->get_field_labels();
+$all_modules           = $modules->get_modules(
 	array(
 		'availability_status' => 'active',
 		'limit'               => 500,
 	)
 );
-
-$active_modules = array_values(
+$analysis_modules      = array_values(
 	array_filter(
 		$all_modules,
-		function( $module ) {
-			return $module['profile_status'] !== 'disabled';
+		function( $module ) use ( $section_config ) {
+			return in_array( $module['profile_status'], array( 'profile_core', 'profile_optional' ), true ) && isset( $section_config[ sanitize_key( $module['section'] ?: 'overview' ) ] );
 		}
 	)
 );
+$tool_only_modules     = array_values(
+	array_filter(
+		$all_modules,
+		function( $module ) use ( $section_config ) {
+			return 'tool_only' === $module['profile_status'] && isset( $section_config[ sanitize_key( $module['section'] ?: 'overview' ) ] );
+		}
+	)
+);
+$analysis_stats        = $user_data->get_analysis_preparation_stats( $user_id, $analysis_modules, $profile );
+$module_stats          = $user_data->get_dashboard_module_stats( $analysis_modules, $profile );
+$grouped_items         = array();
+$missing_frequency     = array();
+$ready_result_cards    = array();
+$locked_result_cards   = array();
 
-$module_stats = $user_data->get_dashboard_module_stats( $active_modules, $profile );
-$grouped      = $user_data->group_modules_by_section( $active_modules );
-
-$module_items_by_section = array();
 foreach ( $module_stats['modules_with_state'] as $item ) {
 	$section = sanitize_key( $item['module']['section'] ?: 'overview' );
-	if ( ! isset( $module_items_by_section[ $section ] ) ) {
-		$module_items_by_section[ $section ] = array();
+	if ( ! isset( $grouped_items[ $section ] ) ) {
+		$grouped_items[ $section ] = array();
 	}
-	$module_items_by_section[ $section ][] = $item;
+	$grouped_items[ $section ][] = $item;
+
+	foreach ( $item['missing_fields'] as $missing_key ) {
+		if ( ! isset( $missing_frequency[ $missing_key ] ) ) {
+			$missing_frequency[ $missing_key ] = 0;
+		}
+		$missing_frequency[ $missing_key ]++;
+	}
+
+	if ( in_array( $item['state'], array( 'ready', 'optional_ready' ), true ) ) {
+		$ready_result_cards[] = $item;
+	} else {
+		$locked_result_cards[] = $item;
+	}
+}
+
+$section_cards  = array();
+$open_sections  = array();
+$locked_sections = array();
+
+foreach ( $section_config as $section_key => $config ) {
+	$items = $grouped_items[ $section_key ] ?? array();
+	if ( empty( $items ) ) {
+		continue;
+	}
+
+	$missing_union = array();
+	$ready_count   = 0;
+	$locked_count  = 0;
+	foreach ( $items as $item ) {
+		if ( in_array( $item['state'], array( 'ready', 'optional_ready' ), true ) ) {
+			$ready_count++;
+		} else {
+			$locked_count++;
+		}
+		foreach ( $item['missing_fields'] as $missing_key ) {
+			$missing_union[ $missing_key ] = $field_labels[ $missing_key ] ?? $missing_key;
+		}
+	}
+
+	$missing_labels = array_values( $missing_union );
+	$is_open        = 0 === $locked_count || $ready_count > 0;
+
+	$section_cards[] = array(
+		'key'            => $section_key,
+		'label'          => $config['label'],
+		'icon'           => $config['icon'],
+		'description'    => $config['description'],
+		'items'          => $items,
+		'ready_count'    => $ready_count,
+		'locked_count'   => $locked_count,
+		'missing_labels' => $missing_labels,
+		'is_open'        => $is_open,
+		'message'        => $render->get_section_message( $section_key, $missing_labels ),
+	);
+
+	if ( $is_open ) {
+		$open_sections[] = $section_key;
+	} else {
+		$locked_sections[] = $section_key;
+	}
+}
+
+arsort( $missing_frequency );
+$today_suggestions = array();
+foreach ( array_keys( $missing_frequency ) as $field_key ) {
+	$today_suggestions[] = $field_labels[ $field_key ] ?? $field_key;
+	if ( count( $today_suggestions ) >= 3 ) {
+		break;
+	}
+}
+if ( count( $today_suggestions ) < 3 ) {
+	foreach ( $minimum_missing as $field_key ) {
+		$label = $field_labels[ $field_key ] ?? $field_key;
+		if ( ! in_array( $label, $today_suggestions, true ) ) {
+			$today_suggestions[] = $label;
+		}
+		if ( count( $today_suggestions ) >= 3 ) {
+			break;
+		}
+	}
+}
+
+$related_tools = array();
+foreach ( $tool_only_modules as $module ) {
+	$section = sanitize_key( $module['section'] ?: 'overview' );
+	if ( ! empty( $open_sections ) && ! in_array( $section, $open_sections, true ) ) {
+		continue;
+	}
+	$related_tools[] = $module;
+	if ( count( $related_tools ) >= 6 ) {
+		break;
+	}
+}
+if ( empty( $related_tools ) ) {
+	$related_tools = array_slice( $tool_only_modules, 0, 6 );
 }
 
 $user_shares  = $share->get_user_shares( $user_id );
@@ -101,88 +159,18 @@ foreach ( $user_shares as $share_item ) {
 		break;
 	}
 }
-
-$missing_fields_map = array();
-$missing_by_module  = array();
-foreach ( $module_stats['modules_with_state'] as $item ) {
-	if ( empty( $item['missing_fields'] ) ) {
-		continue;
-	}
-	foreach ( $item['missing_fields'] as $missing_key ) {
-		$missing_fields_map[ $missing_key ] = $fields->get_label( $missing_key );
-	}
-	if ( $item['state'] === 'missing_fields' ) {
-		$missing_by_module[] = array(
-			'module'  => $item['module'],
-			'missing' => $item['missing_fields'],
-		);
-	}
-}
-$missing_fields = array_values( $missing_fields_map );
-
-$stats_cards = array(
-	array(
-		'label' => 'Profil Tamamlama',
-		'value' => '%' . absint( $completion ),
-		'tone'  => 'accent',
-	),
-	array(
-		'label' => 'Hazir Analiz',
-		'value' => absint( $module_stats['ready'] + $module_stats['optional_ready'] ),
-		'tone'  => 'success',
-	),
-	array(
-		'label' => 'Eksik Bilgi',
-		'value' => absint( $module_stats['missing'] + $module_stats['optional_missing'] ),
-		'tone'  => 'warning',
-	),
-	array(
-		'label' => 'Aktif Modul',
-		'value' => absint( count( $active_modules ) ),
-		'tone'  => 'neutral',
-	),
-);
-
-$hero_metrics = array(
-	array(
-		'label' => 'Hazir Analiz',
-		'value' => absint( $module_stats['ready'] ),
-	),
-	array(
-		'label' => 'Eksik Bilgi Bekleyen',
-		'value' => absint( $module_stats['missing'] ),
-	),
-	array(
-		'label' => 'Opsiyonel Analiz',
-		'value' => absint( $module_stats['optional_ready'] + $module_stats['optional_missing'] ),
-	),
-	array(
-		'label' => 'Arac Linki',
-		'value' => absint( $module_stats['tool_only'] ),
-	),
-);
 ?>
 <div class="hap-profile-app">
 	<div class="hap-dashboard" id="hap-dashboard">
-		<section class="hap-hero-card">
+		<section class="hap-hero-card hap-dashboard-hero">
 			<div class="hap-hero-main">
 				<div class="hap-hero-avatar-wrap">
 					<?php echo get_avatar( $user_id, 88, '', '', array( 'class' => 'hap-avatar' ) ); ?>
 				</div>
 				<div class="hap-hero-copy">
-					<span class="hap-eyebrow">Uyelik Paneli</span>
+					<span class="hap-eyebrow">Kisisel Analiz Panelin</span>
 					<h1 class="hap-hero-title">Merhaba, <?php echo esc_html( $nickname ); ?></h1>
-					<p class="hap-hero-subtitle">Kisisel analiz panelin burada.</p>
-					<div class="hap-progress-meta">
-						<div>
-							<strong>Profil tamamlama: %<?php echo absint( $completion ); ?></strong>
-							<span><?php echo $completion > 0 ? esc_html__( 'Bilgilerin tamamlandikca daha fazla analiz acilir.', 'hesaplamaa-profile' ) : esc_html__( 'Baslamak icin temel bilgilerini ekle.', 'hesaplamaa-profile' ); ?></span>
-						</div>
-						<span class="hap-progress-chip">%<?php echo absint( $completion ); ?></span>
-					</div>
-					<div class="hap-progress-bar" aria-hidden="true">
-						<div class="hap-progress-fill" style="width: <?php echo absint( $completion ); ?>%"></div>
-					</div>
+					<p class="hap-hero-subtitle">Panelin artik arac katalogu degil; sana ozel hangi analizlerin hazir oldugunu ve yeni kartlari hangi bilgilerle acabilecegini gosteriyor.</p>
 					<div class="hap-hero-actions">
 						<a href="#hap-profile-form" class="hap-btn hap-btn-primary hap-scroll-link">Bilgilerimi Guncelle</a>
 						<?php if ( ! empty( $settings['shareable_profile'] ) ) : ?>
@@ -192,188 +180,228 @@ $hero_metrics = array(
 				</div>
 			</div>
 			<div class="hap-hero-aside">
-				<div class="hap-hero-metrics">
-					<?php foreach ( $hero_metrics as $metric ) : ?>
-						<div class="hap-hero-metric">
-							<span class="hap-hero-metric-value"><?php echo esc_html( $metric['value'] ); ?></span>
-							<span class="hap-hero-metric-label"><?php echo esc_html( $metric['label'] ); ?></span>
+				<div class="hap-progress-cluster">
+					<div class="hap-progress-card">
+						<div class="hap-progress-meta">
+							<div>
+								<strong>Temel profil: %<?php echo absint( $minimum_completion ); ?></strong>
+								<span>Nickname/display name, dogum tarihi, cinsiyet ve sehir</span>
+							</div>
 						</div>
-					<?php endforeach; ?>
+						<div class="hap-progress-bar" aria-hidden="true">
+							<div class="hap-progress-fill" style="width: <?php echo absint( $minimum_completion ); ?>%"></div>
+						</div>
+					</div>
+					<div class="hap-progress-card">
+						<div class="hap-progress-meta">
+							<div>
+								<strong>Analiz hazirligi: %<?php echo absint( $analysis_stats['percentage'] ); ?></strong>
+								<span><?php echo esc_html( $analysis_stats['filled'] . '/' . $analysis_stats['total'] . ' gerekli alan hazir' ); ?></span>
+							</div>
+						</div>
+						<div class="hap-progress-bar" aria-hidden="true">
+							<div class="hap-progress-fill" style="width: <?php echo absint( $analysis_stats['percentage'] ); ?>%"></div>
+						</div>
+					</div>
 				</div>
 				<div class="hap-hero-note">
-					<strong><?php echo esc_html( $dash_stats['filled_fields'] ); ?>/<?php echo esc_html( $dash_stats['total_fields'] ); ?></strong>
-					<span>alan dolduruldu. Panelin seni yonlendirmeye hazir.</span>
+					<strong><?php echo esc_html( count( $open_sections ) ); ?> kategori acik</strong>
+					<span><?php echo esc_html( count( $locked_sections ) ); ?> kategori ek bilgi bekliyor.</span>
 				</div>
 			</div>
 		</section>
 
-		<section class="hap-stats-grid" aria-label="Profil istatistikleri">
-			<?php foreach ( $stats_cards as $card ) : ?>
-				<article class="hap-stat-card hap-tone-<?php echo esc_attr( $card['tone'] ); ?>">
-					<span class="hap-stat-label"><?php echo esc_html( $card['label'] ); ?></span>
-					<strong class="hap-stat-value"><?php echo esc_html( $card['value'] ); ?></strong>
-				</article>
-			<?php endforeach; ?>
+		<section class="hap-stats-grid" aria-label="Profil ozet kartlari">
+			<article class="hap-stat-card hap-tone-accent">
+				<span class="hap-stat-label">Temel Profil</span>
+				<strong class="hap-stat-value">%<?php echo absint( $minimum_completion ); ?></strong>
+			</article>
+			<article class="hap-stat-card hap-tone-success">
+				<span class="hap-stat-label">Analiz Hazirligi</span>
+				<strong class="hap-stat-value">%<?php echo absint( $analysis_stats['percentage'] ); ?></strong>
+			</article>
+			<article class="hap-stat-card hap-tone-warning">
+				<span class="hap-stat-label">Acik Kategori</span>
+				<strong class="hap-stat-value"><?php echo esc_html( count( $open_sections ) ); ?></strong>
+			</article>
+			<article class="hap-stat-card hap-tone-neutral">
+				<span class="hap-stat-label">Kilitli Kategori</span>
+				<strong class="hap-stat-value"><?php echo esc_html( count( $locked_sections ) ); ?></strong>
+			</article>
 		</section>
 
-		<?php if ( ! empty( $missing_fields ) ) : ?>
-			<div class="hap-missing-section">
-				<?php include HAP_PLUGIN_DIR . 'templates/card-missing-fields.php'; ?>
-			</div>
-		<?php endif; ?>
+		<section class="hap-summary-layout">
+			<article class="hap-summary-card">
+				<div class="hap-section-heading">
+					<div>
+						<span class="hap-eyebrow">Profil Ozeti</span>
+						<h2 class="hap-section-title">Bugun tamamlanabilecek 3 oneri</h2>
+					</div>
+					<p class="hap-section-copy">Eksik alanlari tamamladikca yeni analiz kategorileri acilir.</p>
+				</div>
+				<div class="hap-suggestion-list">
+					<?php foreach ( array_slice( $today_suggestions, 0, 3 ) as $label ) : ?>
+						<span class="hap-missing-chip"><?php echo esc_html( $label ); ?></span>
+					<?php endforeach; ?>
+					<?php if ( empty( $today_suggestions ) ) : ?>
+						<span class="hap-missing-chip is-ready">Tum oncelikli bilgiler tamamlandi</span>
+					<?php endif; ?>
+				</div>
+			</article>
+
+			<article class="hap-summary-card">
+				<div class="hap-section-heading">
+					<div>
+						<span class="hap-eyebrow">Eksik Bilgiler</span>
+						<h2 class="hap-section-title">Daha fazla analiz acmak icin</h2>
+					</div>
+					<p class="hap-section-copy">Ana dashboard acik; ama asagidaki bilgiler yeni kartlarin kilidini acar.</p>
+				</div>
+				<div class="hap-suggestion-list">
+					<?php foreach ( array_keys( $missing_frequency ) as $field_key ) : ?>
+						<span class="hap-missing-chip"><?php echo esc_html( $field_labels[ $field_key ] ?? $field_key ); ?></span>
+					<?php endforeach; ?>
+					<?php if ( empty( $missing_frequency ) ) : ?>
+						<span class="hap-missing-chip is-ready">Su an aktif moduller icin eksik zorunlu alan yok</span>
+					<?php endif; ?>
+				</div>
+			</article>
+		</section>
 
 		<section class="hap-sections-area" aria-labelledby="hap-analysis-title">
 			<div class="hap-section-heading">
 				<div>
-					<span class="hap-eyebrow">Analiz Alanlari</span>
-					<h2 class="hap-section-title" id="hap-analysis-title">Hazirlanan analizlerin</h2>
+					<span class="hap-eyebrow">Analiz Kategorileri</span>
+					<h2 class="hap-section-title" id="hap-analysis-title">Kisisel Analiz Panelin</h2>
 				</div>
-				<p class="hap-section-copy">Her kategori icin hazir durumunu, eksik alanlarini ve hizli erisim butonlarini tek bakista gorebilirsin.</p>
+				<p class="hap-section-copy">Bu kartlar yalnizca profile_core ve profile_optional modullerini gosterir. Arac linkleri ikincil seviyededir.</p>
 			</div>
 
-			<div class="hap-sections-grid">
-				<?php foreach ( $sections_config as $section_key => $section_config ) : ?>
-					<?php
-					if ( empty( $grouped[ $section_key ] ) || empty( $module_items_by_section[ $section_key ] ) ) {
-						continue;
-					}
-
-					$section_items          = $module_items_by_section[ $section_key ];
-					$section_total          = count( $section_items );
-					$section_ready          = 0;
-					$section_missing        = 0;
-					$section_optional       = 0;
-					$section_tools          = 0;
-					$section_cta_label      = 'Analizleri Gor';
-					$section_cta_href       = '#hap-sec-' . $section_key;
-					$section_completion_pct = 0;
-
-					foreach ( $section_items as $section_item ) {
-						switch ( $section_item['state'] ) {
-							case 'ready':
-								$section_ready++;
-								break;
-							case 'missing_fields':
-								$section_missing++;
-								$section_cta_label = 'Bilgiyi Tamamla';
-								$section_cta_href  = '#hap-profile-form';
-								break;
-							case 'optional_ready':
-							case 'optional_missing':
-								$section_optional++;
-								break;
-							case 'tool_only':
-								$section_tools++;
-								break;
-						}
-					}
-
-					if ( $section_total > 0 ) {
-						$section_completion_pct = (int) round( ( ( $section_ready + $section_tools + $section_optional ) / $section_total ) * 100 );
-					}
-					?>
-					<article class="hap-section-card" id="hap-sec-<?php echo esc_attr( $section_key ); ?>">
-						<div class="hap-section-card-top">
-							<div class="hap-section-card-icon"><?php echo esc_html( $section_config['icon'] ); ?></div>
-							<div class="hap-section-card-head">
-								<h3 class="hap-section-card-title"><?php echo esc_html( $section_config['label'] ); ?></h3>
-								<p class="hap-section-card-copy"><?php echo esc_html( $section_config['description'] ); ?></p>
+			<div class="hap-analysis-card-grid">
+				<?php foreach ( $section_cards as $card ) : ?>
+					<article class="hap-analysis-card">
+						<div class="hap-analysis-card-top">
+							<div class="hap-section-card-icon"><?php echo esc_html( $card['icon'] ); ?></div>
+							<div class="hap-analysis-card-head">
+								<h3 class="hap-section-card-title"><?php echo esc_html( $card['label'] ); ?></h3>
+								<p class="hap-section-card-copy"><?php echo esc_html( $card['description'] ); ?></p>
 							</div>
+							<span class="hap-status-pill <?php echo $card['is_open'] ? 'hap-ready' : 'hap-missing'; ?>">
+								<?php echo $card['is_open'] ? 'Analiz hazir' : 'Kilitli'; ?>
+							</span>
 						</div>
-
-						<div class="hap-section-card-stats">
-							<span class="hap-status-pill hap-ready">Hazir <?php echo absint( $section_ready ); ?></span>
-							<span class="hap-status-pill hap-missing">Eksik <?php echo absint( $section_missing ); ?></span>
-							<span class="hap-status-pill hap-optional">Opsiyonel <?php echo absint( $section_optional ); ?></span>
-							<span class="hap-status-pill hap-tool">Arac <?php echo absint( $section_tools ); ?></span>
+						<p class="hap-analysis-card-message"><?php echo esc_html( $card['message'] ); ?></p>
+						<div class="hap-analysis-card-meta">
+							<span class="hap-status-pill hap-ready">Acik <?php echo esc_html( $card['ready_count'] ); ?></span>
+							<span class="hap-status-pill hap-missing">Kilitli <?php echo esc_html( $card['locked_count'] ); ?></span>
 						</div>
-
-						<div class="hap-section-progress">
-							<div class="hap-progress-bar" aria-hidden="true">
-								<div class="hap-progress-fill" style="width: <?php echo absint( $section_completion_pct ); ?>%"></div>
+						<?php if ( ! empty( $card['missing_labels'] ) ) : ?>
+							<div class="hap-suggestion-list">
+								<?php foreach ( $card['missing_labels'] as $missing_label ) : ?>
+									<span class="hap-missing-chip"><?php echo esc_html( $missing_label ); ?></span>
+								<?php endforeach; ?>
 							</div>
-							<span class="hap-section-progress-label">%<?php echo absint( $section_completion_pct ); ?> erisim hazirligi</span>
+						<?php endif; ?>
+						<div class="hap-analysis-card-actions">
+							<?php if ( ! empty( $card['missing_labels'] ) ) : ?>
+								<a href="#hap-profile-form" class="hap-btn hap-btn-primary hap-scroll-link">Bilgiyi Tamamla</a>
+							<?php else : ?>
+								<span class="hap-status-pill hap-ready">Analiz hazir</span>
+							<?php endif; ?>
 						</div>
-
-						<ul class="hap-module-list">
-							<?php foreach ( array_slice( $section_items, 0, 5 ) as $item ) : ?>
-								<?php
-								$module        = $item['module'];
-								$state         = $item['state'];
-								$missing_keys  = $item['missing_fields'];
-								$module_title  = ! empty( $module['title'] ) ? $module['title'] : hap_profile_humanize_slug( $module['slug'] );
-								$module_action = '';
-								$module_href   = '';
-								$badge_label   = '';
-								$badge_class   = '';
-
-								switch ( $state ) {
-									case 'ready':
-										$badge_label   = 'Hazir';
-										$badge_class   = 'hap-ready';
-										$module_action = 'Hazir';
-										if ( ! empty( $module['shortcode'] ) ) {
-											$module_href = get_permalink() . '?sc=' . rawurlencode( $module['slug'] );
-										}
-										break;
-									case 'missing_fields':
-										$badge_label   = 'Eksik bilgi';
-										$badge_class   = 'hap-missing';
-										$module_action = 'Bilgiyi Tamamla';
-										$module_href   = '#hap-profile-form';
-										break;
-									case 'optional_ready':
-										$badge_label   = 'Opsiyonel';
-										$badge_class   = 'hap-optional';
-										$module_action = 'Hazir';
-										if ( ! empty( $module['shortcode'] ) ) {
-											$module_href = get_permalink() . '?sc=' . rawurlencode( $module['slug'] );
-										}
-										break;
-									case 'optional_missing':
-										$badge_label   = 'Opsiyonel';
-										$badge_class   = 'hap-optional';
-										$module_action = 'Bilgiyi Tamamla';
-										$module_href   = '#hap-profile-form';
-										break;
-									case 'tool_only':
-										$badge_label   = 'Arac';
-										$badge_class   = 'hap-tool';
-										$module_action = 'Araci Ac';
-										if ( ! empty( $module['shortcode'] ) ) {
-											$module_href = get_permalink() . '?sc=' . rawurlencode( $module['slug'] );
-										}
-										break;
-								}
-								?>
-								<li class="hap-module-item">
-									<div class="hap-module-main">
-										<div class="hap-module-title-row">
-											<span class="hap-module-name"><?php echo esc_html( $module_title ); ?></span>
-											<span class="hap-status-pill <?php echo esc_attr( $badge_class ); ?>"><?php echo esc_html( $badge_label ); ?></span>
-										</div>
-										<?php if ( ! empty( $missing_keys ) ) : ?>
-											<p class="hap-module-hint">Gerekli: <?php echo esc_html( implode( ', ', array_map( array( $fields, 'get_label' ), $missing_keys ) ) ); ?></p>
-										<?php endif; ?>
-									</div>
-									<?php if ( $module_href ) : ?>
-										<a class="hap-module-action <?php echo 0 === strpos( $module_href, '#' ) ? 'hap-scroll-link' : ''; ?>" href="<?php echo esc_url( $module_href ); ?>">
-											<?php echo esc_html( $module_action ); ?>
-										</a>
-									<?php else : ?>
-										<span class="hap-module-action is-static"><?php echo esc_html( $module_action ); ?></span>
-									<?php endif; ?>
-								</li>
-							<?php endforeach; ?>
-						</ul>
-
-						<a href="<?php echo esc_url( $section_cta_href ); ?>" class="hap-btn hap-btn-tertiary <?php echo '#hap-profile-form' === $section_cta_href ? 'hap-scroll-link' : ''; ?>">
-							<?php echo esc_html( $section_cta_label ); ?>
-						</a>
 					</article>
 				<?php endforeach; ?>
 			</div>
 		</section>
+
+		<section class="hap-results-area" id="hap-results">
+			<div class="hap-section-heading">
+				<div>
+					<span class="hap-eyebrow">Kisisel Sonuclar</span>
+					<h2 class="hap-section-title">Hazir ve bekleyen analizler</h2>
+				</div>
+				<p class="hap-section-copy">Gercek hesap motoruna dokunmadan, hangi modullerin kullanima hazir oldugunu ve hangi bilgilerin eksik oldugunu gosteriyoruz.</p>
+			</div>
+
+			<div class="hap-results-grid">
+				<?php foreach ( $ready_result_cards as $item ) : ?>
+					<?php
+					$module         = $item['module'];
+					$title          = ! empty( $module['title'] ) ? $module['title'] : hap_profile_humanize_slug( $module['slug'] );
+					$required       = $user_data->get_effective_required_fields( $module );
+					$required_names = array();
+					foreach ( $required as $field_key ) {
+						$required_names[] = $field_labels[ $field_key ] ?? $field_key;
+					}
+					?>
+					<article class="hap-result-card is-ready">
+						<div class="hap-result-card-head">
+							<h3><?php echo esc_html( $title ); ?></h3>
+							<span class="hap-status-pill hap-ready">Hesaplanmaya hazir</span>
+						</div>
+						<p class="hap-result-card-copy">Bu analiz, mevcut profil bilgilerine gore hazir duruma geldi.</p>
+						<p class="hap-result-card-detail">Kullanilan bilgiler: <?php echo esc_html( ! empty( $required_names ) ? implode( ', ', $required_names ) : 'Temel profil bilgileri' ); ?></p>
+						<div class="hap-result-card-actions">
+							<?php if ( ! empty( $module['shortcode'] ) ) : ?>
+								<a href="<?php echo esc_url( $current_page_url . '?sc=' . rawurlencode( $module['slug'] ) ); ?>" class="hap-result-link">Detayli hesaplama aracini ac</a>
+							<?php endif; ?>
+						</div>
+					</article>
+				<?php endforeach; ?>
+
+				<?php foreach ( $locked_result_cards as $item ) : ?>
+					<?php
+					$module         = $item['module'];
+					$title          = ! empty( $module['title'] ) ? $module['title'] : hap_profile_humanize_slug( $module['slug'] );
+					$missing_labels = array();
+					foreach ( $item['missing_fields'] as $field_key ) {
+						$missing_labels[] = $field_labels[ $field_key ] ?? $field_key;
+					}
+					?>
+					<article class="hap-result-card is-locked">
+						<div class="hap-result-card-head">
+							<h3><?php echo esc_html( $title ); ?></h3>
+							<span class="hap-status-pill hap-missing">Eksik bilgi</span>
+						</div>
+						<p class="hap-result-card-copy">Bu analiz icin su bilgiler eksik: <?php echo esc_html( implode( ', ', $missing_labels ) ); ?></p>
+						<div class="hap-suggestion-list">
+							<?php foreach ( $missing_labels as $label ) : ?>
+								<span class="hap-missing-chip"><?php echo esc_html( $label ); ?></span>
+							<?php endforeach; ?>
+						</div>
+						<div class="hap-result-card-actions">
+							<a href="#hap-profile-form" class="hap-btn hap-btn-primary hap-scroll-link">Bilgiyi Tamamla</a>
+						</div>
+					</article>
+				<?php endforeach; ?>
+			</div>
+		</section>
+
+		<?php if ( ! empty( $related_tools ) ) : ?>
+			<section class="hap-tools-area">
+				<div class="hap-section-heading">
+					<div>
+						<span class="hap-eyebrow">Ikincil Araclar</span>
+						<h2 class="hap-section-title">Ilgili hesaplama araclari</h2>
+					</div>
+					<p class="hap-section-copy">Tool only moduller burada kucuk ve ikincil olarak listelenir.</p>
+				</div>
+				<div class="hap-related-tools">
+					<?php foreach ( $related_tools as $module ) : ?>
+						<?php $title = ! empty( $module['title'] ) ? $module['title'] : hap_profile_humanize_slug( $module['slug'] ); ?>
+						<article class="hap-related-tool">
+							<div>
+								<strong><?php echo esc_html( $title ); ?></strong>
+								<span><?php echo esc_html( $section_config[ sanitize_key( $module['section'] ?: 'overview' ) ]['label'] ?? 'Diger' ); ?></span>
+							</div>
+							<?php if ( ! empty( $module['shortcode'] ) ) : ?>
+								<a href="<?php echo esc_url( $current_page_url . '?sc=' . rawurlencode( $module['slug'] ) ); ?>" class="hap-result-link">Detayli araci ac</a>
+							<?php endif; ?>
+						</article>
+					<?php endforeach; ?>
+				</div>
+			</section>
+		<?php endif; ?>
 
 		<section class="hap-profile-form-section">
 			<div class="hap-section-heading">
@@ -381,14 +409,9 @@ $hero_metrics = array(
 					<span class="hap-eyebrow">Profil Bilgileri</span>
 					<h2 class="hap-section-title">Bilgilerini duzenle</h2>
 				</div>
-				<p class="hap-section-copy"><?php echo esc_html( $dash_stats['filled_fields'] . '/' . $dash_stats['total_fields'] . ' alan dolduruldu. Bu bilgiler sadece kisisel analizlerini olusturmak icin kullanilir.' ); ?></p>
+				<p class="hap-section-copy">Bu form mevcut user_meta yapisini kullanir. Eksik bilgileri tamamladikca yukaridaki kartlar yeniden acilir.</p>
 			</div>
-			<?php
-			$tpl_path = HAP_PLUGIN_DIR . 'templates/form-basic.php';
-			if ( file_exists( $tpl_path ) ) {
-				include $tpl_path;
-			}
-			?>
+			<?php include HAP_PLUGIN_DIR . 'templates/form-basic.php'; ?>
 		</section>
 
 		<?php if ( ! empty( $settings['shareable_profile'] ) ) : ?>
@@ -401,12 +424,12 @@ $hero_metrics = array(
 					<p class="hap-share-desc">Gorunur bolumleri sec. Hassas bilgiler her zaman gizli tutulur.</p>
 
 					<div class="hap-share-sections">
-						<?php foreach ( $sections_config as $section_key => $section_config ) : ?>
+						<?php foreach ( $section_config as $section_key => $config ) : ?>
 							<label class="hap-share-check">
 								<input type="checkbox" name="hap_visible_section" value="<?php echo esc_attr( $section_key ); ?>" checked>
 								<span class="hap-share-check-ui">
-									<span class="hap-share-check-icon"><?php echo esc_html( $section_config['icon'] ); ?></span>
-									<span><?php echo esc_html( $section_config['label'] ); ?></span>
+									<span class="hap-share-check-icon"><?php echo esc_html( $config['icon'] ); ?></span>
+									<span><?php echo esc_html( $config['label'] ); ?></span>
 								</span>
 							</label>
 						<?php endforeach; ?>

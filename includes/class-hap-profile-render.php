@@ -23,21 +23,26 @@ class HAP_Profile_Render {
 	private $modules;
 	private $user_data;
 	private $share;
+	private $onboarding;
 
 	public function __construct(
 		HAP_Profile_Fields $fields,
 		HAP_Profile_Modules $modules,
 		HAP_Profile_User_Data $user_data,
-		HAP_Profile_Share $share
+		HAP_Profile_Share $share,
+		HAP_Profile_Onboarding $onboarding
 	) {
 		$this->fields    = $fields;
 		$this->modules   = $modules;
 		$this->user_data = $user_data;
 		$this->share     = $share;
+		$this->onboarding = $onboarding;
 	}
 
 	public function register_shortcodes() {
 		add_shortcode( 'hap_user_profile_dashboard', array( $this, 'shortcode_dashboard' ) );
+		add_shortcode( 'hap_profile_onboarding', array( $this, 'shortcode_onboarding' ) );
+		add_shortcode( 'hap_profile_dashboard_only', array( $this, 'shortcode_dashboard_only' ) );
 		add_shortcode( 'hap_profile_form', array( $this, 'shortcode_form' ) );
 		add_shortcode( 'hap_profile_share_button', array( $this, 'shortcode_share_button' ) );
 		add_shortcode( 'hap_public_profile', array( $this, 'shortcode_public_profile' ) );
@@ -51,10 +56,7 @@ class HAP_Profile_Render {
 		}
 
 		if ( ! is_user_logged_in() ) {
-			if ( empty( $settings['allow_guest_profile'] ) ) {
-				return $this->render_login_prompt();
-			}
-			return $this->render_guest_form();
+			return $this->render_login_prompt();
 		}
 
 		$user_id = get_current_user_id();
@@ -64,19 +66,39 @@ class HAP_Profile_Render {
 			return $this->render_public_profile_by_token( $share_token );
 		}
 
-		ob_start();
-		$this->load_template(
-			'dashboard',
-			array(
-				'user_id'   => $user_id,
-				'fields'    => $this->fields,
-				'modules'   => $this->modules,
-				'user_data' => $this->user_data,
-				'share'     => $this->share,
-				'settings'  => $settings,
-			)
-		);
-		return ob_get_clean();
+		if ( ! $this->user_data->is_minimum_profile_complete( $user_id ) ) {
+			return $this->render_onboarding_for_user( $user_id );
+		}
+
+		return $this->render_dashboard_for_user( $user_id, $settings );
+	}
+
+	public function shortcode_onboarding( $atts ) {
+		$settings = get_option( 'hap_profile_settings', array() );
+
+		if ( empty( $settings['system_active'] ) ) {
+			return '<p class="hap-notice">' . esc_html__( 'Profil sistemi su an aktif degil.', 'hesaplamaa-profile' ) . '</p>';
+		}
+
+		if ( ! is_user_logged_in() ) {
+			return $this->render_login_prompt();
+		}
+
+		return $this->render_onboarding_for_user( get_current_user_id() );
+	}
+
+	public function shortcode_dashboard_only( $atts ) {
+		$settings = get_option( 'hap_profile_settings', array() );
+
+		if ( empty( $settings['system_active'] ) ) {
+			return '<p class="hap-notice">' . esc_html__( 'Profil sistemi su an aktif degil.', 'hesaplamaa-profile' ) . '</p>';
+		}
+
+		if ( ! is_user_logged_in() ) {
+			return $this->render_login_prompt();
+		}
+
+		return $this->render_dashboard_for_user( get_current_user_id(), $settings );
 	}
 
 	public function shortcode_form( $atts ) {
@@ -131,6 +153,149 @@ class HAP_Profile_Render {
 			return '<p class="hap-notice">' . esc_html__( 'Gecerli bir paylasim baglantisi bulunamadi.', 'hesaplamaa-profile' ) . '</p>';
 		}
 		return $this->render_public_profile_by_token( $token );
+	}
+
+	public function get_sections_config() {
+		return array(
+			'overview'           => array(
+				'label'       => 'Temel Profil',
+				'icon'        => 'TP',
+				'description' => 'Temel kimlik ve dogum bilgilerine dayanan cekirdek analizler.',
+			),
+			'astrology'         => array(
+				'label'       => 'Astroloji',
+				'icon'        => 'As',
+				'description' => 'Dogum tarihine dayanan temel astrolojik gorunum.',
+			),
+			'astrology_houses'  => array(
+				'label'       => 'Astroloji Evleri',
+				'icon'        => 'AE',
+				'description' => 'Yukselen ve ev yerlesimleri gibi detayli harita bolumleri.',
+			),
+			'moon_sky'          => array(
+				'label'       => 'Ay & Gokyuzu',
+				'icon'        => 'AG',
+				'description' => 'Ay burcu ve gokyuzu ritimlerine dayanan kartlar.',
+			),
+			'health_lifestyle'  => array(
+				'label'       => 'Saglik & Yasam',
+				'icon'        => 'SY',
+				'description' => 'Boy, kilo ve rutin bilgileriyle acilan yasam analizi kartlari.',
+			),
+			'sport_activity'    => array(
+				'label'       => 'Spor & Aktivite',
+				'icon'        => 'SA',
+				'description' => 'Aktivite seviyesiyle acilan hareket ve performans odakli kartlar.',
+			),
+			'numerology'        => array(
+				'label'       => 'Numeroloji',
+				'icon'        => 'Nu',
+				'description' => 'Ad ve soyad bilgisiyle acilan isim temelli numeroloji kartlari.',
+			),
+			'chinese_astrology' => array(
+				'label'       => 'Cin Astrolojisi',
+				'icon'        => 'CA',
+				'description' => 'Dogum tarihine dayali cin astrolojisi ozetleri.',
+			),
+			'symbolic'          => array(
+				'label'       => 'Sembolik Profil',
+				'icon'        => 'SP',
+				'description' => 'Sembolik yorum ve sezgisel profil kartlari.',
+			),
+			'tarot'             => array(
+				'label'       => 'Tarot',
+				'icon'        => 'Ta',
+				'description' => 'Kart tabanli sezgisel rehberlik ve yorumlar.',
+			),
+		);
+	}
+
+	public function get_section_message( $section_key, array $missing_labels ) {
+		switch ( $section_key ) {
+			case 'astrology':
+				return empty( $missing_labels )
+					? 'Dogum tarihinle temel burc analizlerin hazir.'
+					: 'Dogum tarihinle temel burc analizlerin hazir. Daha fazla detay icin ek bilgiler tamamlanabilir.';
+			case 'astrology_houses':
+				return empty( $missing_labels )
+					? 'Dogum saati ve yeriyle ev yerlesimi analizlerin hazir.'
+					: 'Dogum saati ve dogum yeri bilgilerini ekleyerek ev yerlesimi analizlerini acabilirsin.';
+			case 'moon_sky':
+				return empty( $missing_labels )
+					? 'Ay burcu ve gokyuzu kartlarin hazir.'
+					: 'Dogum saati ve dogum yeri eklenince Ay burcu ve gokyuzu kartlari hazir olur.';
+			case 'health_lifestyle':
+				return empty( $missing_labels )
+					? 'Boy, kilo ve aktivite duzeyiyle yasam analizi kartlarin hazir.'
+					: 'Boy, kilo ve aktivite duzeyi bilgilerini eklediginde gunluk yasam analizlerin hazirlanir.';
+			case 'sport_activity':
+				return empty( $missing_labels )
+					? 'Aktivite bazli spor kartlarin acildi.'
+					: 'Hareket ve performans kartlarini acmak icin boy, kilo ve aktivite seviyeni tamamla.';
+			case 'numerology':
+				return empty( $missing_labels )
+					? 'Ad ve soyadina gore isim temelli numeroloji kartlarin hazir.'
+					: 'Ad ve soyad bilgini eklediginde isim temelli numeroloji analizlerin acilir.';
+			default:
+				return empty( $missing_labels )
+					? 'Bu analiz kategorisi icin gerekli bilgiler tamamlandi.'
+					: 'Bu analiz kategorisini acmak icin eksik bilgileri tamamlayabilirsin.';
+		}
+	}
+
+	public function get_current_page_url() {
+		$post_id = get_queried_object_id();
+		if ( $post_id ) {
+			return get_permalink( $post_id );
+		}
+
+		return home_url( '/' );
+	}
+
+	public function get_dashboard_url() {
+		$settings        = get_option( 'hap_profile_settings', array() );
+		$profile_page_id = absint( $settings['profile_page_id'] ?? 0 );
+		if ( $profile_page_id ) {
+			$url = get_permalink( $profile_page_id );
+			if ( $url ) {
+				return $url;
+			}
+		}
+
+		return $this->get_current_page_url();
+	}
+
+	private function render_dashboard_for_user( $user_id, array $settings ) {
+		ob_start();
+		$this->load_template(
+			'dashboard',
+			array(
+				'user_id'    => $user_id,
+				'fields'     => $this->fields,
+				'modules'    => $this->modules,
+				'user_data'  => $this->user_data,
+				'share'      => $this->share,
+				'settings'   => $settings,
+				'render'     => $this,
+				'onboarding' => $this->onboarding,
+			)
+		);
+		return ob_get_clean();
+	}
+
+	private function render_onboarding_for_user( $user_id ) {
+		ob_start();
+		$this->load_template(
+			'onboarding',
+			array(
+				'user_id'       => $user_id,
+				'fields'        => $this->fields,
+				'user_data'     => $this->user_data,
+				'onboarding'    => $this->onboarding,
+				'dashboard_url' => $this->get_dashboard_url(),
+			)
+		);
+		return ob_get_clean();
 	}
 
 	private function render_public_profile_by_token( $token ) {
@@ -296,6 +461,8 @@ class HAP_Profile_Render {
 
 		$hap_shortcodes = array(
 			'hap_user_profile_dashboard',
+			'hap_profile_onboarding',
+			'hap_profile_dashboard_only',
 			'hap_profile_form',
 			'hap_profile_share_button',
 			'hap_public_profile',
@@ -428,6 +595,8 @@ class HAP_Profile_Render {
 
 		$hap_shortcodes = array(
 			'hap_user_profile_dashboard',
+			'hap_profile_onboarding',
+			'hap_profile_dashboard_only',
 			'hap_profile_form',
 			'hap_profile_register',
 			'hap_profile_login',
