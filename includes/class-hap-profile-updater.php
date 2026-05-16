@@ -20,49 +20,47 @@ class HAP_Profile_Updater {
 	);
 
 	public function __construct() {
-		add_action( 'admin_post_hap_update_from_github',   array( $this, 'handle_update' ) );
+		add_action( 'admin_post_hap_update_from_github', array( $this, 'handle_update' ) );
 		add_action( 'admin_post_hap_rollback_from_backup', array( $this, 'handle_rollback' ) );
-		add_action( 'wp_ajax_hap_check_github_version',    array( $this, 'ajax_check_version' ) );
+		add_action( 'wp_ajax_hap_check_github_version', array( $this, 'ajax_check_version' ) );
 	}
 
-	/* -------------------------------------------------------
-	   AYARLAR
-	   ------------------------------------------------------- */
-
 	public function get_settings() {
-		return wp_parse_args( get_option( $this->option_key, array() ), array(
-			'repo'   => '',
-			'branch' => 'main',
-		) );
+		return wp_parse_args(
+			get_option( $this->option_key, array() ),
+			array(
+				'repo'   => '',
+				'branch' => 'main',
+			)
+		);
 	}
 
 	public function save_settings( $data ) {
-		update_option( $this->option_key, array(
-			'repo'   => $this->sanitize_repo( $data['repo'] ?? '' ),
-			'branch' => $this->sanitize_branch( $data['branch'] ?? 'main' ),
-		) );
+		update_option(
+			$this->option_key,
+			array(
+				'repo'   => $this->sanitize_repo( $data['repo'] ?? '' ),
+				'branch' => $this->sanitize_branch( $data['branch'] ?? 'main' ),
+			)
+		);
 	}
 
-	/* -------------------------------------------------------
-	   UZAK SÜRÜM KONTROLÜ
-	   ------------------------------------------------------- */
-
 	public function get_remote_version() {
-		$s = $this->get_settings();
+		$settings = $this->get_settings();
 
-		if ( empty( $s['repo'] ) ) {
+		if ( empty( $settings['repo'] ) ) {
 			return new WP_Error( 'missing_repo', 'GitHub repo ayarı eksik.' );
 		}
 
-		if ( ! $this->is_valid_repo( $s['repo'] ) ) {
+		if ( ! $this->is_valid_repo( $settings['repo'] ) ) {
 			return new WP_Error( 'invalid_repo', 'Repo formatı geçersiz. Beklenen: kullanici/repo-adi' );
 		}
 
-		if ( ! $this->is_valid_branch( $s['branch'] ) ) {
+		if ( ! $this->is_valid_branch( $settings['branch'] ) ) {
 			return new WP_Error( 'invalid_branch', 'Branch adı geçersiz.' );
 		}
 
-		$url  = "https://api.github.com/repos/{$s['repo']}/commits/{$s['branch']}";
+		$url  = "https://api.github.com/repos/{$settings['repo']}/commits/{$settings['branch']}";
 		$args = array(
 			'timeout' => 20,
 			'headers' => array(
@@ -71,18 +69,18 @@ class HAP_Profile_Updater {
 			),
 		);
 
-		$resp = wp_remote_get( $url, $args );
+		$response = wp_remote_get( $url, $args );
 
-		if ( is_wp_error( $resp ) ) {
-			return new WP_Error( 'github_request_failed', 'GitHub bağlantısı kurulamadı: ' . $resp->get_error_message() );
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error( 'github_request_failed', 'GitHub bağlantısı kurulamadı: ' . $response->get_error_message() );
 		}
 
-		$code = wp_remote_retrieve_response_code( $resp );
-		$body = json_decode( wp_remote_retrieve_body( $resp ), true );
+		$code = wp_remote_retrieve_response_code( $response );
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( $code < 200 || $code >= 300 ) {
-			$msg = is_array( $body ) && ! empty( $body['message'] ) ? $body['message'] : 'GitHub API yanıtı başarısız.';
-			return new WP_Error( 'github_api_error', 'Sürüm bilgisi alınamadı: ' . $msg );
+			$message = is_array( $body ) && ! empty( $body['message'] ) ? $body['message'] : 'GitHub API yanıtı başarısız.';
+			return new WP_Error( 'github_api_error', 'Sürüm bilgisi alınamadı: ' . $message );
 		}
 
 		if ( empty( $body['sha'] ) ) {
@@ -91,10 +89,6 @@ class HAP_Profile_Updater {
 
 		return $body['sha'];
 	}
-
-	/* -------------------------------------------------------
-	   UPDATE HANDLER
-	   ------------------------------------------------------- */
 
 	public function handle_update() {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -118,8 +112,7 @@ class HAP_Profile_Updater {
 
 		$this->reset_update_state();
 
-		$s      = $this->get_settings();
-		$result = $this->download_and_install( $s );
+		$result = $this->download_and_install( $this->get_settings() );
 
 		if ( true === $result ) {
 			$this->set_update_notice( 'success', 'Eklenti GitHub üzerinden başarıyla güncellendi.' );
@@ -134,10 +127,6 @@ class HAP_Profile_Updater {
 		wp_safe_redirect( admin_url( 'admin.php?page=hesaplamaa-profile&tab=updater&update=error' ) );
 		exit;
 	}
-
-	/* -------------------------------------------------------
-	   ROLLBACK HANDLER
-	   ------------------------------------------------------- */
 
 	public function handle_rollback() {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -168,10 +157,12 @@ class HAP_Profile_Updater {
 		}
 
 		$result = $this->restore_from_backup( $backup_path, HAP_PLUGIN_DIR );
-		$this->log_update_debug( array(
-			'rollback_result' => is_wp_error( $result ) ? $result->get_error_message() : 'success',
-			'rollback_source' => $backup_path,
-		) );
+		$this->log_update_debug(
+			array(
+				'rollback_result' => is_wp_error( $result ) ? $result->get_error_message() : 'success',
+				'rollback_source' => $backup_path,
+			)
+		);
 
 		if ( true === $result ) {
 			$this->flush_caches();
@@ -180,15 +171,11 @@ class HAP_Profile_Updater {
 			exit;
 		}
 
-		$msg = $result instanceof WP_Error ? $result->get_error_message() : 'Geri dönüş sırasında bilinmeyen bir hata oluştu.';
-		$this->set_update_notice( 'error', 'Geri dönüş başarısız: ' . $msg );
+		$message = $result instanceof WP_Error ? $result->get_error_message() : 'Geri dönüş sırasında bilinmeyen bir hata oluştu.';
+		$this->set_update_notice( 'error', 'Geri dönüş başarısız: ' . $message );
 		wp_safe_redirect( admin_url( 'admin.php?page=hesaplamaa-profile&tab=updater&rollback=error' ) );
 		exit;
 	}
-
-	/* -------------------------------------------------------
-	   AJAX: SÜRÜM KONTROLÜ
-	   ------------------------------------------------------- */
 
 	public function ajax_check_version() {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -208,10 +195,6 @@ class HAP_Profile_Updater {
 		wp_send_json_success( array( 'sha' => substr( $sha, 0, 7 ) ) );
 	}
 
-	/* -------------------------------------------------------
-	   UPDATE NOTICE ERİŞİMCİLERİ
-	   ------------------------------------------------------- */
-
 	public function get_update_notice( $delete = true ) {
 		$notice = get_transient( $this->notice_transient_key );
 		if ( $delete ) {
@@ -228,21 +211,16 @@ class HAP_Profile_Updater {
 		return get_option( $this->debug_option_key, array() );
 	}
 
-	/* -------------------------------------------------------
-	   ANA KURULUM MANTIĞI
-	   ------------------------------------------------------- */
-
-	private function download_and_install( $s ) {
-		// Adım 1 — Repo ve branch doğrula
-		if ( empty( $s['repo'] ) ) {
+	private function download_and_install( $settings ) {
+		if ( empty( $settings['repo'] ) ) {
 			return new WP_Error( 'missing_repo', 'GitHub repo ayarı eksik.' );
 		}
 
-		if ( ! $this->is_valid_repo( $s['repo'] ) ) {
+		if ( ! $this->is_valid_repo( $settings['repo'] ) ) {
 			return new WP_Error( 'invalid_repo', 'Repo formatı geçersiz. Beklenen: kullanici/repo-adi' );
 		}
 
-		if ( ! $this->is_valid_branch( $s['branch'] ) ) {
+		if ( ! $this->is_valid_branch( $settings['branch'] ) ) {
 			return new WP_Error( 'invalid_branch', 'Branch adı geçersiz. Sadece harf, sayı, -, _ ve . kullanılabilir.' );
 		}
 
@@ -254,32 +232,31 @@ class HAP_Profile_Updater {
 		$plugin_base       = dirname( $plugin_dir );
 		$filesystem_method = function_exists( 'get_filesystem_method' ) ? get_filesystem_method() : 'unknown';
 
-		$this->log_update_debug( array(
-			'step'              => '1_validate',
-			'repo'              => $s['repo'],
-			'branch'            => $s['branch'],
-			'filesystem_method' => $filesystem_method,
-			'dest_writable'     => is_writable( $plugin_dir ) ? 'yes' : 'no',
-		) );
+		$this->log_update_debug(
+			array(
+				'step'              => '1_validate',
+				'repo'              => $settings['repo'],
+				'branch'            => $settings['branch'],
+				'filesystem_method' => $filesystem_method,
+				'dest_writable'     => is_writable( $plugin_dir ) ? 'yes' : 'no',
+			)
+		);
 
-		// Adım 2 — Backup oluştur
 		$backup_path = $this->create_backup( $plugin_dir );
-		$this->log_update_debug( array(
-			'step'        => '2_backup',
-			'backup_path' => is_wp_error( $backup_path ) ? $backup_path->get_error_message() : $backup_path,
-		) );
+		$this->log_update_debug(
+			array(
+				'step'        => '2_backup',
+				'backup_path' => is_wp_error( $backup_path ) ? $backup_path->get_error_message() : $backup_path,
+			)
+		);
 
 		if ( is_wp_error( $backup_path ) ) {
-			return $this->wrap_error(
-				'backup_failed',
-				'Backup oluşturulamadığı için güncelleme iptal edildi: ' . $backup_path->get_error_message()
-			);
+			return $this->wrap_error( 'backup_failed', 'Backup oluşturulamadığı için güncelleme iptal edildi: ' . $backup_path->get_error_message() );
 		}
 
 		update_option( 'hap_profile_last_backup_path', $backup_path, false );
 
-		// Adım 3 — ZIP indir
-		$zip_url = "https://github.com/{$s['repo']}/archive/refs/heads/{$s['branch']}.zip";
+		$zip_url = "https://github.com/{$settings['repo']}/archive/refs/heads/{$settings['branch']}.zip";
 		$args    = array(
 			'timeout' => 60,
 			'headers' => array(
@@ -289,25 +266,28 @@ class HAP_Profile_Updater {
 		);
 
 		$tmp = $this->download_zip( $zip_url, $args );
-		$this->log_update_debug( array(
-			'step'          => '3_download',
-			'zip_url'       => $zip_url,
-			'zip_http_code' => (string) $this->last_zip_http_code,
-			'tmp_created'   => ( ! is_wp_error( $tmp ) && ! empty( $tmp ) ) ? 'yes' : 'no',
-		) );
+		$this->log_update_debug(
+			array(
+				'step'          => '3_download',
+				'zip_url'       => $zip_url,
+				'zip_http_code' => (string) $this->last_zip_http_code,
+				'tmp_created'   => ( ! is_wp_error( $tmp ) && ! empty( $tmp ) ) ? 'yes' : 'no',
+			)
+		);
 
 		if ( is_wp_error( $tmp ) ) {
 			return $tmp;
 		}
 
-		// Adım 4 — ZIP aç
 		global $wp_filesystem;
 		WP_Filesystem();
 
-		$this->log_update_debug( array(
-			'step'                => '4_unzip',
-			'wp_filesystem_class' => is_object( $wp_filesystem ) ? get_class( $wp_filesystem ) : 'unavailable',
-		) );
+		$this->log_update_debug(
+			array(
+				'step'                => '4_unzip',
+				'wp_filesystem_class' => is_object( $wp_filesystem ) ? get_class( $wp_filesystem ) : 'unavailable',
+			)
+		);
 
 		$unzip = unzip_file( $tmp, $plugin_base );
 		@unlink( $tmp );
@@ -318,17 +298,18 @@ class HAP_Profile_Updater {
 			return $this->wrap_error( 'github_unzip_failed', 'ZIP arşivi açılamadı: ' . $unzip->get_error_message() );
 		}
 
-		// Adım 5 — Paketi bul ve hesaplamaa-profile.php varlığını doğrula
-		$repo_name     = basename( $s['repo'] );
-		$extracted_dir = $plugin_base . '/' . $repo_name . '-' . $s['branch'];
+		$repo_name     = basename( $settings['repo'] );
+		$extracted_dir = $plugin_base . '/' . $repo_name . '-' . $settings['branch'];
 		$package_root  = $this->locate_package_root( $extracted_dir );
 
-		$this->log_update_debug( array(
-			'step'                 => '5_locate',
-			'extracted_dir'        => $extracted_dir,
-			'extracted_dir_exists' => is_dir( $extracted_dir ) ? 'yes' : 'no',
-			'package_root'         => $package_root ?: '',
-		) );
+		$this->log_update_debug(
+			array(
+				'step'                 => '5_locate',
+				'extracted_dir'        => $extracted_dir,
+				'extracted_dir_exists' => is_dir( $extracted_dir ) ? 'yes' : 'no',
+				'package_root'         => $package_root ?: '',
+			)
+		);
 
 		if ( ! is_dir( $extracted_dir ) ) {
 			return $this->wrap_error( 'extracted_dir_missing', 'İndirilen paket açılamadı veya beklenen klasör bulunamadı.' );
@@ -339,7 +320,6 @@ class HAP_Profile_Updater {
 			return $this->wrap_error( 'package_root_missing', 'İndirilen pakette hesaplamaa-profile.php bulunamadı.' );
 		}
 
-		// Adım 6 — Plugin header doğrula
 		$header_valid = $this->validate_plugin_header( trailingslashit( $package_root ) . 'hesaplamaa-profile.php' );
 		$this->log_update_debug( array( 'step' => '6_header', 'header_valid' => $header_valid ? 'yes' : 'no' ) );
 
@@ -351,70 +331,69 @@ class HAP_Profile_Updater {
 			);
 		}
 
-		// Adım 7 — Dosyaları kopyala
 		$copied = copy_dir( $package_root, $plugin_dir );
-		$this->log_update_debug( array(
-			'step'                => '7_copy',
-			'copy_dir_result'     => is_wp_error( $copied ) ? $copied->get_error_code() : 'success',
-			'copy_dir_message'    => is_wp_error( $copied ) ? $copied->get_error_message() : '',
-			'plugin_dir'          => $plugin_dir,
-			'plugin_dir_writable' => is_writable( $plugin_dir ) ? 'yes' : 'no',
-		) );
+		$this->log_update_debug(
+			array(
+				'step'                => '7_copy',
+				'copy_dir_result'     => is_wp_error( $copied ) ? $copied->get_error_code() : 'success',
+				'copy_dir_message'    => is_wp_error( $copied ) ? $copied->get_error_message() : '',
+				'plugin_dir'          => $plugin_dir,
+				'plugin_dir_writable' => is_writable( $plugin_dir ) ? 'yes' : 'no',
+			)
+		);
 
 		if ( is_wp_error( $copied ) && $this->should_use_native_copy_fallback( $filesystem_method, $plugin_dir ) ) {
 			$copied = $this->native_recursive_copy( $package_root, $plugin_dir );
-			$this->log_update_debug( array(
-				'native_copy_fallback'         => is_wp_error( $copied ) ? $copied->get_error_code() : 'success',
-				'native_copy_fallback_message' => is_wp_error( $copied ) ? $copied->get_error_message() : '',
-			) );
+			$this->log_update_debug(
+				array(
+					'native_copy_fallback'         => is_wp_error( $copied ) ? $copied->get_error_code() : 'success',
+					'native_copy_fallback_message' => is_wp_error( $copied ) ? $copied->get_error_message() : '',
+				)
+			);
 		}
 
 		$this->cleanup_directory( $extracted_dir );
 
 		if ( is_wp_error( $copied ) ) {
-			$rb = $this->restore_from_backup( $backup_path, $plugin_dir );
-			$this->log_update_debug( array(
-				'step'            => '7_copy_failed_rollback',
-				'rollback_result' => is_wp_error( $rb ) ? $rb->get_error_message() : 'success',
-			) );
+			$rollback = $this->restore_from_backup( $backup_path, $plugin_dir );
+			$this->log_update_debug(
+				array(
+					'step'            => '7_copy_failed_rollback',
+					'rollback_result' => is_wp_error( $rollback ) ? $rollback->get_error_message() : 'success',
+				)
+			);
 			return $this->wrap_error( 'copy_failed', 'Yeni dosyalar kopyalanamadı, eski sürüm geri yüklendi: ' . $copied->get_error_message() );
 		}
 
-		// Adım 8 — PHP syntax kontrolü
 		$syntax = $this->check_syntax( $plugin_dir );
-		$this->log_update_debug( array(
-			'step'          => '8_syntax',
-			'syntax_result' => $syntax['ok'] ? 'ok' : 'error',
-			'syntax_detail' => $syntax['detail'],
-		) );
+		$this->log_update_debug(
+			array(
+				'step'          => '8_syntax',
+				'syntax_result' => $syntax['ok'] ? 'ok' : 'error',
+				'syntax_detail' => $syntax['detail'],
+			)
+		);
 
-		// Adım 9 — Kritik dosya kontrolü
 		$files_ok = $this->check_critical_files( $plugin_dir );
-		$this->log_update_debug( array(
-			'step'         => '9_critical_files',
-			'files_result' => $files_ok ? 'ok' : 'missing',
-		) );
+		$this->log_update_debug(
+			array(
+				'step'         => '9_critical_files',
+				'files_result' => $files_ok ? 'ok' : 'missing',
+			)
+		);
 
-		// Adım 10 — Kontrol başarısızsa rollback
 		if ( ! $syntax['ok'] || ! $files_ok ) {
-			$rb     = $this->restore_from_backup( $backup_path, $plugin_dir );
-			$rb_msg = is_wp_error( $rb ) ? $rb->get_error_message() : 'başarılı';
-			$this->log_update_debug( array( 'step' => '10_rollback', 'rollback_result' => $rb_msg ) );
+			$rollback     = $this->restore_from_backup( $backup_path, $plugin_dir );
+			$rollback_msg = is_wp_error( $rollback ) ? $rollback->get_error_message() : 'başarılı';
+			$this->log_update_debug( array( 'step' => '10_rollback', 'rollback_result' => $rollback_msg ) );
 
 			if ( ! $syntax['ok'] ) {
-				return $this->wrap_error(
-					'syntax_check_failed',
-					'PHP syntax hatası tespit edildi, eklenti eski sürüme geri döndürüldü. Detay: ' . $syntax['detail']
-				);
+				return $this->wrap_error( 'syntax_check_failed', 'PHP syntax hatası tespit edildi, eklenti eski sürüme geri döndürüldü. Detay: ' . $syntax['detail'] );
 			}
 
-			return $this->wrap_error(
-				'critical_files_missing',
-				'Güncelleme sonrası kritik dosyalar eksik, eklenti eski sürüme geri döndürüldü.'
-			);
+			return $this->wrap_error( 'critical_files_missing', 'Güncelleme sonrası kritik dosyalar eksik, eklenti eski sürüme geri döndürüldü.' );
 		}
 
-		// Adım 11 — Başarı: options kaydet ve cache temizle
 		$remote_sha = $this->get_remote_version();
 		update_option( 'hap_profile_last_update', current_time( 'mysql' ) );
 		update_option( 'hap_profile_last_update_version', (string) time() );
@@ -428,10 +407,6 @@ class HAP_Profile_Updater {
 
 		return true;
 	}
-
-	/* -------------------------------------------------------
-	   BACKUP OLUŞTUR
-	   ------------------------------------------------------- */
 
 	private function create_backup( $plugin_dir ) {
 		$uploads = wp_upload_dir();
@@ -468,10 +443,6 @@ class HAP_Profile_Updater {
 		return $backup_path;
 	}
 
-	/* -------------------------------------------------------
-	   BACKUP'TAN GERİ YÜKLE
-	   ------------------------------------------------------- */
-
 	private function restore_from_backup( $backup_path, $plugin_dir ) {
 		if ( ! is_dir( $backup_path ) ) {
 			return new WP_Error( 'backup_not_found', 'Backup klasörü bulunamadı: ' . $backup_path );
@@ -479,10 +450,6 @@ class HAP_Profile_Updater {
 
 		return $this->native_recursive_copy( $backup_path, $plugin_dir );
 	}
-
-	/* -------------------------------------------------------
-	   PLUGIN HEADER DOĞRULAMA
-	   ------------------------------------------------------- */
 
 	private function validate_plugin_header( $plugin_file ) {
 		if ( ! is_file( $plugin_file ) ) {
@@ -494,14 +461,14 @@ class HAP_Profile_Updater {
 			return false;
 		}
 
-		if ( preg_match( '/^[\s\*]*Plugin Name\s*:\s*(.+)$/mi', $content, $m ) ) {
-			if ( stripos( $m[1], 'hesaplamaa' ) !== false ) {
+		if ( preg_match( '/^[\s\*]*Plugin Name\s*:\s*(.+)$/mi', $content, $matches ) ) {
+			if ( false !== stripos( $matches[1], 'hesaplamaa' ) ) {
 				return true;
 			}
 		}
 
-		if ( preg_match( '/^[\s\*]*Text Domain\s*:\s*(.+)$/mi', $content, $m ) ) {
-			if ( 'hesaplamaa-profile' === strtolower( trim( $m[1] ) ) ) {
+		if ( preg_match( '/^[\s\*]*Text Domain\s*:\s*(.+)$/mi', $content, $matches ) ) {
+			if ( 'hesaplamaa-profile' === strtolower( trim( $matches[1] ) ) ) {
 				return true;
 			}
 		}
@@ -509,12 +476,11 @@ class HAP_Profile_Updater {
 		return false;
 	}
 
-	/* -------------------------------------------------------
-	   PHP SYNTAX KONTROLÜ
-	   ------------------------------------------------------- */
-
 	private function check_syntax( $plugin_dir ) {
-		$result = array( 'ok' => true, 'detail' => '' );
+		$result = array(
+			'ok'     => true,
+			'detail' => '',
+		);
 
 		$shell_available = function_exists( 'shell_exec' ) && is_callable( 'shell_exec' );
 		if ( $shell_available ) {
@@ -543,10 +509,10 @@ class HAP_Profile_Updater {
 			if ( ! is_file( $file ) ) {
 				continue;
 			}
-			$out = @shell_exec( 'php -l ' . escapeshellarg( $file ) . ' 2>&1' );
-			if ( $out && strpos( $out, 'No syntax errors' ) === false ) {
+			$output = @shell_exec( 'php -l ' . escapeshellarg( $file ) . ' 2>&1' );
+			if ( $output && false === strpos( $output, 'No syntax errors' ) ) {
 				$result['ok']     = false;
-				$result['detail'] = basename( $file ) . ': ' . trim( $out );
+				$result['detail'] = basename( $file ) . ': ' . trim( $output );
 				return $result;
 			}
 		}
@@ -555,22 +521,14 @@ class HAP_Profile_Updater {
 		return $result;
 	}
 
-	/* -------------------------------------------------------
-	   KRİTİK DOSYA KONTROLÜ
-	   ------------------------------------------------------- */
-
 	private function check_critical_files( $plugin_dir ) {
-		foreach ( $this->critical_files as $rel ) {
-			if ( ! is_file( trailingslashit( $plugin_dir ) . $rel ) ) {
+		foreach ( $this->critical_files as $relative_path ) {
+			if ( ! is_file( trailingslashit( $plugin_dir ) . $relative_path ) ) {
 				return false;
 			}
 		}
 		return true;
 	}
-
-	/* -------------------------------------------------------
-	   CACHE TEMİZLE
-	   ------------------------------------------------------- */
 
 	private function flush_caches() {
 		if ( function_exists( 'wp_clean_plugins_cache' ) ) {
@@ -583,10 +541,6 @@ class HAP_Profile_Updater {
 			@opcache_reset();
 		}
 	}
-
-	/* -------------------------------------------------------
-	   YARDIMCILAR
-	   ------------------------------------------------------- */
 
 	private function locate_package_root( $extracted_dir ) {
 		$required_file = trailingslashit( $extracted_dir ) . 'hesaplamaa-profile.php';
@@ -614,23 +568,20 @@ class HAP_Profile_Updater {
 		$args['stream']   = true;
 		$args['filename'] = $tmp;
 
-		$resp = wp_remote_get( $url, $args );
+		$response = wp_remote_get( $url, $args );
 
-		if ( is_wp_error( $resp ) ) {
+		if ( is_wp_error( $response ) ) {
 			$this->last_zip_http_code = 0;
 			@unlink( $tmp );
-			return $resp;
+			return $response;
 		}
 
-		$code                     = wp_remote_retrieve_response_code( $resp );
+		$code                     = wp_remote_retrieve_response_code( $response );
 		$this->last_zip_http_code = (int) $code;
 
 		if ( $code < 200 || $code >= 300 ) {
 			@unlink( $tmp );
-			return new WP_Error(
-				'github_zip_download_failed',
-				'GitHub ZIP indirilemedi. HTTP ' . $code . '. Repo ve branch ayarlarını kontrol edin.'
-			);
+			return new WP_Error( 'github_zip_download_failed', 'GitHub ZIP indirilemedi. HTTP ' . $code . '. Repo ve branch ayarlarını kontrol edin.' );
 		}
 
 		return $tmp;
@@ -639,7 +590,6 @@ class HAP_Profile_Updater {
 	private function sanitize_repo( $repo ) {
 		$repo = sanitize_text_field( wp_unslash( $repo ) );
 		$repo = trim( $repo, " \t\n\r\0\x0B/" );
-		// Şema, query string ve fragment temizle
 		$repo = preg_replace( '/[?#].+$/', '', $repo );
 		$repo = preg_replace( '#^https?://[^/]+/#i', '', $repo );
 		return $repo;
@@ -653,7 +603,6 @@ class HAP_Profile_Updater {
 	}
 
 	private function is_valid_repo( $repo ) {
-		// Sadece owner/repo — URL, query param veya başka karakter yok
 		return (bool) preg_match( '/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/', $repo );
 	}
 
@@ -668,16 +617,16 @@ class HAP_Profile_Updater {
 
 	private function native_recursive_copy( $source, $destination ) {
 		if ( ! is_dir( $source ) ) {
-			return new WP_Error( 'native_copy_source_missing', 'Kopyalama kaynağı bulunamadı.' );
+			return new WP_Error( 'native_copy_source_missing', 'Kopyalama kaynağı bulunamadı: ' . $source );
 		}
 
 		if ( ! is_dir( $destination ) || ! is_writable( $destination ) ) {
-			return new WP_Error( 'native_copy_destination_unwritable', 'Hedef klasör yazılabilir değil.' );
+			return new WP_Error( 'native_copy_destination_unwritable', 'Hedef klasör yazılabilir değil: ' . $destination );
 		}
 
 		$items = scandir( $source );
 		if ( false === $items ) {
-			return new WP_Error( 'native_copy_scandir_failed', 'Kaynak klasör okunamadı.' );
+			return new WP_Error( 'native_copy_scandir_failed', 'Kaynak klasör okunamadı: ' . $source );
 		}
 
 		foreach ( $items as $item ) {
@@ -689,8 +638,13 @@ class HAP_Profile_Updater {
 			$to   = trailingslashit( $destination ) . $item;
 
 			if ( is_dir( $from ) ) {
+				if ( file_exists( $to ) && ! is_dir( $to ) ) {
+					if ( ! @unlink( $to ) ) {
+						return new WP_Error( 'native_copy_conflict_failed', 'Hedefteki çakışan dosya silinemedi: ' . $to );
+					}
+				}
 				if ( ! is_dir( $to ) && ! wp_mkdir_p( $to ) ) {
-					return new WP_Error( 'native_copy_mkdir_failed', 'Hedef klasör oluşturulamadı: ' . $item );
+					return new WP_Error( 'native_copy_mkdir_failed', 'Hedef klasör oluşturulamadı: ' . $to );
 				}
 				$copied = $this->native_recursive_copy( $from, $to );
 				if ( is_wp_error( $copied ) ) {
@@ -699,8 +653,23 @@ class HAP_Profile_Updater {
 				continue;
 			}
 
+			if ( file_exists( $to ) ) {
+				@chmod( $to, 0644 );
+				if ( ! is_writable( $to ) ) {
+					@unlink( $to );
+				}
+			}
+
+			if ( file_exists( $to ) && ! is_writable( $to ) ) {
+				return new WP_Error( 'native_copy_target_locked', 'Hedef dosya yazılabilir değil: ' . $to );
+			}
+
 			if ( ! @copy( $from, $to ) ) {
-				return new WP_Error( 'native_copy_file_failed', 'Dosya kopyalanamadı: ' . $item );
+				$error = error_get_last();
+				return new WP_Error(
+					'native_copy_file_failed',
+					'Dosya kopyalanamadı: ' . $from . ' -> ' . $to . ( ! empty( $error['message'] ) ? ' | ' . $error['message'] : '' )
+				);
 			}
 		}
 
@@ -785,10 +754,6 @@ class HAP_Profile_Updater {
 		$this->save_update_error( $sanitized );
 		return new WP_Error( $code, $sanitized );
 	}
-
-	/* -------------------------------------------------------
-	   STATİK YARDIMCILAR
-	   ------------------------------------------------------- */
 
 	public static function get_version_string() {
 		$base_version    = HAP_VERSION;
