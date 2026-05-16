@@ -153,13 +153,21 @@ class HAP_Profile_Module_Runner {
 	/**
 	 * Tek bir modülü kullanıcı profil verisiyle çalıştırır.
 	 *
+	 * Öncelik sırası:
+	 *   1. Finans filtresi → filtered_by_profile_policy
+	 *   2. Eksik alan kontrolü → missing_fields
+	 *   3. results_store önbellek (input_hash eşleşirse) → ready_result
+	 *   4. apply_filters('hc_calculate_module') → Suite Calculation API
+	 *   5. legacy php_callback → ready_result
+	 *   6. frontend_only
+	 *
 	 * @param array $module     DB'den gelen modül satırı.
 	 * @param int   $user_id    WP kullanıcı ID.
 	 * @param array $profile    Kullanıcı profil verisi (opsiyonel — verilmezse DB'den çekilir).
 	 * @return array            runner result array.
 	 */
 	public static function run_module_for_user( $module, $user_id, $profile = null ) {
-		// Finans/alakasız filtrele.
+		// 1. Finans/alakasız filtrele.
 		if ( ! self::is_profile_relevant( $module ) ) {
 			return array(
 				'module'   => $module,
@@ -173,12 +181,12 @@ class HAP_Profile_Module_Runner {
 
 		// Profil verisini al.
 		if ( null === $profile ) {
-			$fields_obj  = new HAP_Profile_Fields();
-			$ud          = new HAP_Profile_User_Data( $fields_obj );
-			$profile     = $ud->get_user_profile_data( $user_id );
+			$fields_obj = new HAP_Profile_Fields();
+			$ud         = new HAP_Profile_User_Data( $fields_obj );
+			$profile    = $ud->get_user_profile_data( $user_id );
 		}
 
-		// Eksik alan kontrolü.
+		// 2. Eksik alan kontrolü.
 		$missing = self::get_missing_fields( $module, $profile );
 		if ( ! empty( $missing ) ) {
 			return array(
@@ -191,23 +199,91 @@ class HAP_Profile_Module_Runner {
 			);
 		}
 
-		// Kapasite tespiti.
-		$capability = self::detect_module_capabilities( $module );
+		$slug    = $module['slug'];
+		$payload = self::build_payload_for_module( $module, $profile );
+		$hash    = md5( serialize( $payload ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
-		// PHP callback varsa çağırmayı dene.
+		// 3. Önbellekten oku.
+		if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
+			$cached = HAP_Profile_Results_Store::get( $user_id, $slug, $hash );
+			if ( null !== $cached && ! empty( $cached['success'] ) ) {
+				return array(
+					'module'   => $module,
+					'state'    => 'ready_result',
+					'message'  => self::get_user_message_for_state( 'ready_result' ),
+					'missing'  => array(),
+					'result'   => $cached,
+					'tool_url' => self::get_tool_url( $module ),
+					'cached'   => true,
+				);
+			}
+		}
+
+		// 4. Hesaplama Suite Calculation API (apply_filters).
+		if ( has_filter( 'hc_calculate_module' ) ) {
+			try {
+				$api_result = apply_filters( 'hc_calculate_module', null, $slug, $payload );
+				if ( is_array( $api_result ) && ! empty( $api_result['success'] ) ) {
+					// Önbelleğe kaydet.
+					if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
+						HAP_Profile_Results_Store::put( $user_id, $slug, $hash, $api_result );
+					}
+					return array(
+						'module'   => $module,
+						'state'    => 'ready_result',
+						'message'  => self::get_user_message_for_state( 'ready_result' ),
+						'missing'  => array(),
+						'result'   => $api_result,
+						'tool_url' => self::get_tool_url( $module ),
+						'cached'   => false,
+					);
+				}
+				// API başarısız döndü — unsupported veya hata olabilir.
+				if ( is_array( $api_result ) && isset( $api_result['error_code'] ) ) {
+					$error_code = $api_result['error_code'];
+					// "unsupported_backend_calculation" → frontend_only gibi davran.
+					if ( 'unsupported_backend_calculation' === $error_code ) {
+						return array(
+							'module'   => $module,
+							'state'    => 'frontend_only',
+							'message'  => self::get_user_message_for_state( 'frontend_only' ),
+							'missing'  => array(),
+							'result'   => null,
+							'tool_url' => self::get_tool_url( $module ),
+						);
+					}
+				}
+			} catch ( Exception $e ) {
+				// Calculation API istisnası — runner_error olarak dön.
+				return array(
+					'module'   => $module,
+					'state'    => 'runner_error',
+					'message'  => self::get_user_message_for_state( 'runner_error' ),
+					'missing'  => array(),
+					'result'   => null,
+					'tool_url' => self::get_tool_url( $module ),
+				);
+			}
+		}
+
+		// 5. Legacy PHP callback (admin tarafından elle ayarlananlar).
+		$capability = self::detect_module_capabilities( $module );
 		if ( 'php_callback' === $capability && ! empty( $module['runner_callback'] ) ) {
 			$cb = $module['runner_callback'];
 			if ( is_callable( $cb ) ) {
 				try {
-					$payload = self::build_payload_for_module( $module, $profile );
-					$raw     = call_user_func( $cb, $payload );
+					$raw = call_user_func( $cb, $payload );
 					if ( ! empty( $raw ) ) {
+						$normalized = self::normalize_result( $module, $raw );
+						if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
+							HAP_Profile_Results_Store::put( $user_id, $slug, $hash, $normalized );
+						}
 						return array(
 							'module'   => $module,
 							'state'    => 'ready_result',
 							'message'  => self::get_user_message_for_state( 'ready_result' ),
 							'missing'  => array(),
-							'result'   => self::normalize_result( $module, $raw ),
+							'result'   => $normalized,
 							'tool_url' => self::get_tool_url( $module ),
 						);
 					}
@@ -224,8 +300,7 @@ class HAP_Profile_Module_Runner {
 			}
 		}
 
-		// Hesaplama Suite şu an tamamen frontend-only (JS hesaplıyor).
-		// Kullanıcıya teknik mesaj değil, bağlantı hazırlanıyor mesajı gösterilir.
+		// 6. Hesaplama Suite frontend-only (JS hesaplıyor, backend API yokken).
 		return array(
 			'module'   => $module,
 			'state'    => 'frontend_only',

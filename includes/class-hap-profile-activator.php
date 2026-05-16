@@ -97,6 +97,11 @@ class HAP_Profile_Activator {
 		dbDelta( $sql_modules );
 		dbDelta( $sql_shares );
 
+		// Results önbellek tablosu.
+		if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
+			HAP_Profile_Results_Store::create_table();
+		}
+
 		update_option( 'hap_profile_db_version', HAP_VERSION );
 	}
 

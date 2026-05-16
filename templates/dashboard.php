@@ -368,13 +368,24 @@ foreach ( $user_shares as $share_item ) {
 									<h3><?php echo esc_html( $title ); ?></h3>
 									<span class="hap-status-pill hap-ready">Sonuç hazır</span>
 								</div>
-								<?php if ( ! empty( $result['value'] ) ) : ?>
+								<?php if ( ! empty( $result['value'] ) || '0' === (string) $result['value'] ) : ?>
 									<div class="hap-result-value">
-										<strong class="hap-result-value-text"><?php echo esc_html( $result['value'] ); ?></strong>
+										<strong class="hap-result-value-text">
+											<?php echo esc_html( $result['value'] ); ?>
+											<?php if ( ! empty( $result['unit'] ) ) : ?>
+												<span class="hap-result-unit"><?php echo esc_html( $result['unit'] ); ?></span>
+											<?php endif; ?>
+										</strong>
 										<?php if ( ! empty( $result['label'] ) ) : ?>
 											<span class="hap-result-value-label"><?php echo esc_html( $result['label'] ); ?></span>
 										<?php endif; ?>
 									</div>
+								<?php endif; ?>
+								<?php if ( ! empty( $result['description'] ) ) : ?>
+									<p class="hap-result-description"><?php echo esc_html( $result['description'] ); ?></p>
+								<?php endif; ?>
+								<?php if ( ! empty( $result['warnings'] ) ) : ?>
+									<p class="hap-result-warning"><?php echo esc_html( reset( $result['warnings'] ) ); ?></p>
 								<?php endif; ?>
 								<?php if ( $tool_url ) : ?>
 									<p class="hap-result-tool-link"><a href="<?php echo esc_url( $tool_url ); ?>" target="_blank" rel="noopener">Detaylı hesaplama aracı</a></p>

@@ -3,7 +3,7 @@
  * Plugin Name: Hesaplamaa Profile
  * Plugin URI: https://hesaplamaa.com/
  * Description: Hesaplamaa kullanıcıları için kişisel analiz, profil dashboard ve paylaşılabilir profil kartları eklentisi.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Author: Hesaplamaa
  * Text Domain: hesaplamaa-profile
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'HAP_VERSION', '0.3.0' );
+define( 'HAP_VERSION', '0.4.0' );
 define( 'HAP_PLUGIN_FILE', __FILE__ );
 define( 'HAP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'HAP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

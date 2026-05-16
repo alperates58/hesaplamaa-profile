@@ -1363,6 +1363,27 @@
 	color: var(--hap-text-muted);
 }
 
+.hap-profile-app .hap-result-unit {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--hap-success-text);
+	margin-left: 3px;
+}
+
+.hap-profile-app .hap-result-description {
+	font-size: 13px;
+	color: var(--hap-text-body);
+	margin: 6px 0 0;
+	line-height: 1.5;
+}
+
+.hap-profile-app .hap-result-warning {
+	font-size: 11px;
+	color: var(--hap-text-muted);
+	margin: 6px 0 0;
+	font-style: italic;
+}
+
 /* Result card — pending state */
 .hap-profile-app .hap-result-card.hap-result-pending {
 	opacity: 0.9;
