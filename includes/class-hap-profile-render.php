@@ -3,6 +3,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! function_exists( 'hap_profile_humanize_slug' ) ) {
+	function hap_profile_humanize_slug( $slug ) {
+		$slug = sanitize_title( (string) $slug );
+		if ( '' === $slug ) {
+			return '';
+		}
+
+		$human = str_replace( array( '-', '_' ), ' ', $slug );
+		$human = preg_replace( '/\s+/', ' ', $human );
+
+		return ucwords( trim( $human ) );
+	}
+}
+
 class HAP_Profile_Render {
 
 	private $fields;
@@ -33,7 +47,7 @@ class HAP_Profile_Render {
 		$settings = get_option( 'hap_profile_settings', array() );
 
 		if ( empty( $settings['system_active'] ) ) {
-			return '<p class="hap-notice">' . esc_html__( 'Profil sistemi şu an aktif değil.', 'hesaplamaa-profile' ) . '</p>';
+			return '<p class="hap-notice">' . esc_html__( 'Profil sistemi su an aktif degil.', 'hesaplamaa-profile' ) . '</p>';
 		}
 
 		if ( ! is_user_logged_in() ) {
@@ -51,14 +65,17 @@ class HAP_Profile_Render {
 		}
 
 		ob_start();
-		$this->load_template( 'dashboard', array(
-			'user_id'   => $user_id,
-			'fields'    => $this->fields,
-			'modules'   => $this->modules,
-			'user_data' => $this->user_data,
-			'share'     => $this->share,
-			'settings'  => $settings,
-		) );
+		$this->load_template(
+			'dashboard',
+			array(
+				'user_id'   => $user_id,
+				'fields'    => $this->fields,
+				'modules'   => $this->modules,
+				'user_data' => $this->user_data,
+				'share'     => $this->share,
+				'settings'  => $settings,
+			)
+		);
 		return ob_get_clean();
 	}
 
@@ -66,13 +83,26 @@ class HAP_Profile_Render {
 		if ( ! is_user_logged_in() ) {
 			return $this->render_login_prompt();
 		}
+
 		$user_id = get_current_user_id();
+
 		ob_start();
-		$this->load_template( 'form-basic', array(
-			'user_id'   => $user_id,
-			'fields'    => $this->fields,
-			'user_data' => $this->user_data,
-		) );
+		?>
+		<div class="hap-profile-app">
+			<div class="hap-dashboard hap-dashboard-form-only">
+				<?php
+				$this->load_template(
+					'form-basic',
+					array(
+						'user_id'   => $user_id,
+						'fields'    => $this->fields,
+						'user_data' => $this->user_data,
+					)
+				);
+				?>
+			</div>
+		</div>
+		<?php
 		return ob_get_clean();
 	}
 
@@ -82,10 +112,13 @@ class HAP_Profile_Render {
 		}
 		$user_id = get_current_user_id();
 		ob_start();
-		$this->load_template( 'share-button', array(
-			'user_id' => $user_id,
-			'share'   => $this->share,
-		) );
+		$this->load_template(
+			'share-button',
+			array(
+				'user_id' => $user_id,
+				'share'   => $this->share,
+			)
+		);
 		return ob_get_clean();
 	}
 
@@ -95,7 +128,7 @@ class HAP_Profile_Render {
 			$token = sanitize_text_field( wp_unslash( $_GET['share'] ) );
 		}
 		if ( ! $token ) {
-			return '<p class="hap-notice">' . esc_html__( 'Geçerli bir paylaşım bağlantısı bulunamadı.', 'hesaplamaa-profile' ) . '</p>';
+			return '<p class="hap-notice">' . esc_html__( 'Gecerli bir paylasim baglantisi bulunamadi.', 'hesaplamaa-profile' ) . '</p>';
 		}
 		return $this->render_public_profile_by_token( $token );
 	}
@@ -103,12 +136,12 @@ class HAP_Profile_Render {
 	private function render_public_profile_by_token( $token ) {
 		$share_data = $this->share->get_share_by_token( $token );
 		if ( ! $share_data ) {
-			return '<p class="hap-notice">' . esc_html__( 'Bu profil paylaşımı bulunamadı veya süresi dolmuş.', 'hesaplamaa-profile' ) . '</p>';
+			return '<p class="hap-notice">' . esc_html__( 'Bu profil paylasimi bulunamadi veya suresi dolmus.', 'hesaplamaa-profile' ) . '</p>';
 		}
 
 		$this->share->increment_view_count( $share_data['id'] );
 
-		$settings      = get_option( 'hap_profile_settings', array() );
+		$settings       = get_option( 'hap_profile_settings', array() );
 		$sensitive_keys = $this->fields->get_sensitive_keys();
 		$user_data      = $this->user_data->get_user_data( $share_data['user_id'] );
 
@@ -121,33 +154,54 @@ class HAP_Profile_Render {
 		}
 
 		ob_start();
-		$this->load_template( 'dashboard-public', array(
-			'share_data'       => $share_data,
-			'user_data'        => $user_data,
-			'fields'           => $this->fields,
-			'modules'          => $this->modules,
-			'visible_sections' => $share_data['visible_sections'],
-		) );
+		$this->load_template(
+			'dashboard-public',
+			array(
+				'share_data'       => $share_data,
+				'user_data'        => $user_data,
+				'fields'           => $this->fields,
+				'modules'          => $this->modules,
+				'visible_sections' => $share_data['visible_sections'],
+			)
+		);
 		return ob_get_clean();
 	}
 
 	private function render_login_prompt() {
 		ob_start();
 		?>
-		<div class="hap-login-prompt">
-			<div class="hap-login-card">
-				<div class="hap-login-icon">✨</div>
-				<h2><?php esc_html_e( 'Kişisel Profilinizi Oluşturun', 'hesaplamaa-profile' ); ?></h2>
-				<p><?php esc_html_e( 'Profilinizi oluşturmak ve kişisel analizlerinize ulaşmak için giriş yapın.', 'hesaplamaa-profile' ); ?></p>
-				<a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>" class="hap-btn hap-btn-primary">
-					<?php esc_html_e( 'Giriş Yap', 'hesaplamaa-profile' ); ?>
-				</a>
-				<p class="hap-login-register">
-					<?php esc_html_e( 'Hesabınız yok mu?', 'hesaplamaa-profile' ); ?>
-					<a href="<?php echo esc_url( wp_registration_url() ); ?>">
-						<?php esc_html_e( 'Ücretsiz Kaydol', 'hesaplamaa-profile' ); ?>
-					</a>
-				</p>
+		<div class="hap-profile-app">
+			<div class="hap-login-prompt">
+				<div class="hap-login-card">
+					<div class="hap-login-icon">Hp</div>
+					<div>
+						<span class="hap-eyebrow"><?php esc_html_e( 'Kisisel Analiz Merkezi', 'hesaplamaa-profile' ); ?></span>
+						<h2><?php esc_html_e( 'Kisisel Profilinizi Olusturun', 'hesaplamaa-profile' ); ?></h2>
+					</div>
+					<p><?php esc_html_e( 'Saglik, astroloji, numeroloji ve yasam analizlerini tek panelde kesfedin.', 'hesaplamaa-profile' ); ?></p>
+
+					<div class="hap-login-benefits">
+						<div class="hap-login-benefit">
+							<strong><?php esc_html_e( 'Kisisel analiz paneli', 'hesaplamaa-profile' ); ?></strong>
+							<span><?php esc_html_e( 'Tum uyumlu analizlerini premium kartlar halinde gor.', 'hesaplamaa-profile' ); ?></span>
+						</div>
+						<div class="hap-login-benefit">
+							<strong><?php esc_html_e( 'Eksik bilgileri adim adim tamamla', 'hesaplamaa-profile' ); ?></strong>
+							<span><?php esc_html_e( 'Hangi bilginin hangi analizleri actigini tek bakista takip et.', 'hesaplamaa-profile' ); ?></span>
+						</div>
+						<div class="hap-login-benefit">
+							<strong><?php esc_html_e( 'Profilini guvenle paylas', 'hesaplamaa-profile' ); ?></strong>
+							<span><?php esc_html_e( 'Hassas veriler korunurken secili bolumlerini baglanti ile sun.', 'hesaplamaa-profile' ); ?></span>
+						</div>
+					</div>
+
+					<div class="hap-login-actions">
+						<a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>" class="hap-btn hap-btn-primary"><?php esc_html_e( 'Giris Yap', 'hesaplamaa-profile' ); ?></a>
+						<a href="<?php echo esc_url( wp_registration_url() ); ?>" class="hap-btn hap-btn-secondary"><?php esc_html_e( 'Ucretsiz Kaydol', 'hesaplamaa-profile' ); ?></a>
+					</div>
+
+					<p class="hap-login-register"><?php esc_html_e( 'Kayit akisiniz ayri ilerlese bile bu buton mevcut kayit veya giris sayfasina yonlenir.', 'hesaplamaa-profile' ); ?></p>
+				</div>
 			</div>
 		</div>
 		<?php
@@ -157,8 +211,17 @@ class HAP_Profile_Render {
 	private function render_guest_form() {
 		ob_start();
 		?>
-		<div class="hap-guest-form-wrap">
-			<p><?php esc_html_e( 'Misafir profil formu (geliştirme aşamasında).', 'hesaplamaa-profile' ); ?></p>
+		<div class="hap-profile-app">
+			<div class="hap-login-prompt">
+				<div class="hap-login-card">
+					<div class="hap-login-icon">Gs</div>
+					<div>
+						<span class="hap-eyebrow"><?php esc_html_e( 'Yakinda', 'hesaplamaa-profile' ); ?></span>
+						<h2><?php esc_html_e( 'Misafir profil akisi hazirlaniyor', 'hesaplamaa-profile' ); ?></h2>
+					</div>
+					<p><?php esc_html_e( 'Bu alanda simdilik sadece uyelik paneli tasarimi gosterilir. Misafir profil deneyimi sonraki asamada acilacaktir.', 'hesaplamaa-profile' ); ?></p>
+				</div>
+			</div>
 		</div>
 		<?php
 		return ob_get_clean();
@@ -192,22 +255,25 @@ class HAP_Profile_Render {
 			HAP_VERSION,
 			true
 		);
-		wp_localize_script( 'hap-profile', 'hapProfile', array(
-			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'hap_profile_nonce' ),
-			'i18n'    => array(
-				'saving'   => __( 'Kaydediliyor...', 'hesaplamaa-profile' ),
-				'saved'    => __( 'Kaydedildi!', 'hesaplamaa-profile' ),
-				'error'    => __( 'Hata oluştu.', 'hesaplamaa-profile' ),
-				'confirm'  => __( 'Emin misiniz?', 'hesaplamaa-profile' ),
-			),
-		) );
+		wp_localize_script(
+			'hap-profile',
+			'hapProfile',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'hap_profile_nonce' ),
+				'i18n'    => array(
+					'saving'  => __( 'Kaydediliyor...', 'hesaplamaa-profile' ),
+					'saved'   => __( 'Kaydedildi!', 'hesaplamaa-profile' ),
+					'error'   => __( 'Hata olustu.', 'hesaplamaa-profile' ),
+					'confirm' => __( 'Emin misiniz?', 'hesaplamaa-profile' ),
+				),
+			)
+		);
 	}
 
 	private function should_load_assets() {
 		global $post;
 
-		// Paylaşım token'ı varsa her zaman yükle
 		if ( isset( $_GET['hap_share'] ) || isset( $_GET['share'] ) ) {
 			return true;
 		}
@@ -216,7 +282,6 @@ class HAP_Profile_Render {
 			return false;
 		}
 
-		// Ayarlarda tanımlı profil ve paylaşım sayfaları
 		$settings        = get_option( 'hap_profile_settings', array() );
 		$share_settings  = get_option( 'hap_profile_share_settings', array() );
 		$profile_page_id = absint( $settings['profile_page_id'] ?? 0 );
@@ -229,7 +294,6 @@ class HAP_Profile_Render {
 			return true;
 		}
 
-		// Sayfada herhangi bir HAP shortcode var mı?
 		$hap_shortcodes = array(
 			'hap_user_profile_dashboard',
 			'hap_profile_form',
@@ -238,8 +302,8 @@ class HAP_Profile_Render {
 			'hap_profile_register',
 			'hap_profile_login',
 		);
-		foreach ( $hap_shortcodes as $sc ) {
-			if ( has_shortcode( $post->post_content, $sc ) ) {
+		foreach ( $hap_shortcodes as $shortcode ) {
+			if ( has_shortcode( $post->post_content, $shortcode ) ) {
 				return true;
 			}
 		}
@@ -251,7 +315,7 @@ class HAP_Profile_Render {
 		check_ajax_referer( 'hap_profile_nonce', 'nonce' );
 
 		if ( ! is_user_logged_in() ) {
-			wp_send_json_error( array( 'message' => 'Giriş yapmanız gerekiyor.' ) );
+			wp_send_json_error( array( 'message' => 'Giris yapmaniz gerekiyor.' ) );
 		}
 
 		$user_id = get_current_user_id();
@@ -259,10 +323,12 @@ class HAP_Profile_Render {
 
 		$this->user_data->save_user_data( $user_id, $data );
 
-		wp_send_json_success( array(
-			'message'    => 'Profiliniz kaydedildi.',
-			'completion' => $this->user_data->get_completion_percentage( $user_id ),
-		) );
+		wp_send_json_success(
+			array(
+				'message'    => 'Profiliniz kaydedildi.',
+				'completion' => $this->user_data->get_completion_percentage( $user_id ),
+			)
+		);
 	}
 
 	public function handle_save_profile_post() {
@@ -290,7 +356,7 @@ class HAP_Profile_Render {
 		check_ajax_referer( 'hap_profile_nonce', 'nonce' );
 
 		if ( ! is_user_logged_in() ) {
-			wp_send_json_error( array( 'message' => 'Giriş yapmanız gerekiyor.' ) );
+			wp_send_json_error( array( 'message' => 'Giris yapmaniz gerekiyor.' ) );
 		}
 
 		$user_id = get_current_user_id();
@@ -303,11 +369,14 @@ class HAP_Profile_Render {
 
 		$title = sanitize_text_field( $_POST['share_title'] ?? '' );
 
-		$result = $this->share->create_share( $user_id, array(
-			'visible_sections' => $sections,
-			'hidden_fields'    => $hidden,
-			'share_title'      => $title,
-		) );
+		$result = $this->share->create_share(
+			$user_id,
+			array(
+				'visible_sections' => $sections,
+				'hidden_fields'    => $hidden,
+				'share_title'      => $title,
+			)
+		);
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -320,18 +389,18 @@ class HAP_Profile_Render {
 		check_ajax_referer( 'hap_profile_nonce', 'nonce' );
 
 		if ( ! is_user_logged_in() ) {
-			wp_send_json_error( array( 'message' => 'Giriş yapmanız gerekiyor.' ) );
+			wp_send_json_error( array( 'message' => 'Giris yapmaniz gerekiyor.' ) );
 		}
 
 		$user_id  = get_current_user_id();
 		$share_id = absint( $_POST['share_id'] ?? 0 );
 
 		if ( ! $share_id ) {
-			wp_send_json_error( array( 'message' => 'Geçersiz paylaşım.' ) );
+			wp_send_json_error( array( 'message' => 'Gecersiz paylasim.' ) );
 		}
 
 		$this->share->revoke_share( $share_id, $user_id );
-		wp_send_json_success( array( 'message' => 'Paylaşım iptal edildi.' ) );
+		wp_send_json_success( array( 'message' => 'Paylasim iptal edildi.' ) );
 	}
 
 	public function add_noindex( $robots ) {
@@ -366,8 +435,8 @@ class HAP_Profile_Render {
 			'hap_profile_share_button',
 		);
 		$has_shortcode = false;
-		foreach ( $hap_shortcodes as $sc ) {
-			if ( has_shortcode( $post->post_content, $sc ) ) {
+		foreach ( $hap_shortcodes as $shortcode ) {
+			if ( has_shortcode( $post->post_content, $shortcode ) ) {
 				$has_shortcode = true;
 				break;
 			}

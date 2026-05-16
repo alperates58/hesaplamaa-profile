@@ -3,35 +3,40 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 /**
- * @var array                $missing_by_module  [{module, missing[]}]
- * @var HAP_Profile_Fields   $fields
+ * @var array              $missing_by_module  [{module, missing[]}]
+ * @var array              $missing_fields
+ * @var HAP_Profile_Fields $fields
  */
 ?>
-<div class="hap-card hap-missing-card">
-	<div class="hap-card-header">
-		<span class="hap-card-icon">⚠️</span>
-		<h3>Eksik Bilgiler</h3>
-		<span class="hap-badge hap-badge-warning"><?php echo count( $missing_by_module ); ?> analiz bekliyor</span>
+<section class="hap-missing-card">
+	<div class="hap-missing-card-head">
+		<div>
+			<span class="hap-eyebrow">Eksik Bilgiler</span>
+			<h3>Profilini tamamla</h3>
+			<p>Daha fazla analiz acmak icin birkac bilgi eksik.</p>
+		</div>
+		<span class="hap-missing-summary"><?php echo absint( count( $missing_by_module ) ); ?> analiz bekliyor</span>
 	</div>
-	<div class="hap-card-body">
-		<p class="hap-missing-intro">Aşağıdaki analizleri tamamlamak için eksik bilgileri girin:</p>
-		<div class="hap-missing-list">
-			<?php foreach ( array_slice( $missing_by_module, 0, 10 ) as $item ) :
-				$mod    = $item['module'];
-				$missed = $item['missing'];
-			?>
-			<div class="hap-missing-item">
-				<div class="hap-missing-item-title"><?php echo esc_html( $mod['title'] ); ?></div>
-				<div class="hap-missing-item-fields">
-					<?php foreach ( $missed as $mk ) : ?>
-					<span class="hap-tag hap-tag-missing"><?php echo esc_html( $fields->get_label( $mk ) ); ?></span>
-					<?php endforeach; ?>
-				</div>
-			</div>
+
+	<?php if ( ! empty( $missing_fields ) ) : ?>
+		<div class="hap-missing-chips">
+			<?php foreach ( $missing_fields as $missing_label ) : ?>
+				<span class="hap-chip"><?php echo esc_html( $missing_label ); ?></span>
 			<?php endforeach; ?>
 		</div>
-		<a href="#hap-profile-form" class="hap-btn hap-btn-primary hap-scroll-link">
-			✏️ Bilgileri Tamamla
-		</a>
-	</div>
-</div>
+	<?php endif; ?>
+
+	<?php if ( ! empty( $missing_by_module ) ) : ?>
+		<div class="hap-missing-module-list">
+			<?php foreach ( array_slice( $missing_by_module, 0, 3 ) as $item ) : ?>
+				<?php $module_title = ! empty( $item['module']['title'] ) ? $item['module']['title'] : hap_profile_humanize_slug( $item['module']['slug'] ); ?>
+				<div class="hap-missing-module-item">
+					<strong><?php echo esc_html( $module_title ); ?></strong>
+					<span><?php echo esc_html( implode( ', ', array_map( array( $fields, 'get_label' ), $item['missing'] ) ) ); ?></span>
+				</div>
+			<?php endforeach; ?>
+		</div>
+	<?php endif; ?>
+
+	<a href="#hap-profile-form" class="hap-btn hap-btn-primary hap-scroll-link">Eksik Bilgileri Tamamla</a>
+</section>

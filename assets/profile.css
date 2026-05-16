@@ -1,246 +1,986 @@
-/* ============================================================
-   Hesaplamaa Profile — Frontend CSS
-   ============================================================ */
-:root {
+.hap-profile-app {
 	--hap-cta: #ff5a5f;
-	--hap-cta-dark: #e04247;
-	--hap-bg: #f7f8fc;
+	--hap-cta-dark: #e14b50;
+	--hap-text: #172033;
+	--hap-text-strong: #111827;
+	--hap-text-muted: #667085;
+	--hap-bg: #f6f8fb;
 	--hap-card-bg: #ffffff;
-	--hap-border: #e8ecf0;
-	--hap-text: #1a1f2e;
-	--hap-text-muted: #7a8499;
-	--hap-radius: 16px;
-	--hap-radius-sm: 8px;
-	--hap-shadow: 0 2px 16px rgba(0,0,0,.06);
-	--hap-shadow-hover: 0 6px 28px rgba(0,0,0,.11);
-	--hap-transition: .18s cubic-bezier(.4,0,.2,1);
-	--hap-green: #22c55e;
-	--hap-orange: #f59e0b;
-	--hap-blue: #3b82f6;
-	--hap-purple: #8b5cf6;
+	--hap-border: #e5e7eb;
+	--hap-border-strong: #d7dde5;
+	--hap-shadow: 0 20px 50px rgba(17, 24, 39, 0.08);
+	--hap-shadow-soft: 0 10px 25px rgba(17, 24, 39, 0.05);
+	--hap-radius-lg: 24px;
+	--hap-radius-md: 20px;
+	--hap-radius-sm: 14px;
+	--hap-success-bg: #ecfdf3;
+	--hap-success-text: #027a48;
+	--hap-warning-bg: #fff7ed;
+	--hap-warning-text: #c2410c;
+	--hap-optional-bg: #fff1f2;
+	--hap-optional-text: #be123c;
+	--hap-tool-bg: #eef2ff;
+	--hap-tool-text: #4338ca;
+	background:
+		radial-gradient(circle at top left, rgba(255, 90, 95, 0.10), transparent 32%),
+		linear-gradient(180deg, #fbfcfe 0%, #f6f8fb 100%);
+	padding: 28px 16px 56px;
+	color: var(--hap-text);
 }
 
-/* BASE */
-.hap-dashboard { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--hap-text); max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
-.hap-dashboard * { box-sizing: border-box; }
-
-/* HERO */
-.hap-hero { display: flex; align-items: center; gap: 24px; background: var(--hap-card-bg); border-radius: var(--hap-radius); padding: 32px; margin-bottom: 28px; box-shadow: var(--hap-shadow); }
-.hap-avatar { border-radius: 50%; border: 3px solid var(--hap-border); }
-.hap-hero-info { flex: 1; }
-.hap-hero-name { margin: 0 0 4px; font-size: 1.7rem; font-weight: 700; }
-.hap-hero-email { margin: 0 0 12px; color: var(--hap-text-muted); font-size: .9rem; }
-.hap-hero-actions { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
-
-/* COMPLETION BAR */
-.hap-completion-row { display: flex; align-items: center; gap: 12px; }
-.hap-completion-bar { flex: 1; height: 8px; background: var(--hap-border); border-radius: 99px; overflow: hidden; }
-.hap-completion-fill { height: 100%; background: linear-gradient(90deg, var(--hap-cta), #ff8a8d); border-radius: 99px; transition: width .5s ease; }
-.hap-completion-pct { font-size: .8rem; font-weight: 600; color: var(--hap-cta); white-space: nowrap; }
-
-/* BUTTONS */
-.hap-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: var(--hap-radius-sm); font-size: .9rem; font-weight: 600; border: none; cursor: pointer; text-decoration: none; transition: var(--hap-transition); white-space: nowrap; }
-.hap-btn-primary { background: var(--hap-cta); color: #fff; }
-.hap-btn-primary:hover { background: var(--hap-cta-dark); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255,90,95,.35); }
-.hap-btn-outline { background: transparent; color: var(--hap-text); border: 1.5px solid var(--hap-border); }
-.hap-btn-outline:hover { border-color: var(--hap-cta); color: var(--hap-cta); }
-.hap-btn-danger { background: #fff; color: #dc2626; border: 1.5px solid #dc2626; }
-.hap-btn-danger:hover { background: #dc2626; color: #fff; }
-.hap-btn-sm { padding: 6px 12px; font-size: .8rem; }
-
-/* SECTION TITLE */
-.hap-section-title { font-size: 1.3rem; font-weight: 700; margin: 0 0 16px; color: var(--hap-text); }
-
-/* SUMMARY GRID */
-.hap-summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; margin-bottom: 32px; }
-.hap-summary-card { background: var(--hap-card-bg); border-radius: var(--hap-radius); padding: 20px 16px; text-align: center; box-shadow: var(--hap-shadow); border: 1.5px solid transparent; transition: var(--hap-transition); cursor: default; }
-.hap-summary-card:hover { border-color: var(--hap-cta); box-shadow: var(--hap-shadow-hover); transform: translateY(-2px); }
-.hap-summary-icon { font-size: 1.8rem; margin-bottom: 8px; }
-.hap-summary-label { font-size: .78rem; color: var(--hap-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
-.hap-summary-count { font-size: 1.1rem; font-weight: 700; color: var(--hap-text); }
-
-/* CARDS */
-.hap-card { background: var(--hap-card-bg); border-radius: var(--hap-radius); box-shadow: var(--hap-shadow); margin-bottom: 20px; overflow: hidden; }
-.hap-card-header { display: flex; align-items: center; gap: 10px; padding: 18px 24px; border-bottom: 1px solid var(--hap-border); }
-.hap-card-icon { font-size: 1.4rem; }
-.hap-card-header h3 { margin: 0; font-size: 1.05rem; font-weight: 700; flex: 1; }
-.hap-card-body { padding: 20px 24px; }
-
-/* MISSING CARD */
-.hap-missing-card { border-left: 4px solid var(--hap-orange); }
-.hap-missing-intro { margin: 0 0 16px; color: var(--hap-text-muted); font-size: .9rem; }
-.hap-missing-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-.hap-missing-item { padding: 12px 16px; background: #fffbf0; border-radius: var(--hap-radius-sm); }
-.hap-missing-item-title { font-weight: 600; font-size: .9rem; margin-bottom: 6px; }
-.hap-missing-item-fields { display: flex; flex-wrap: wrap; gap: 6px; }
-
-/* SECTIONS GRID */
-.hap-sections-grid { margin-bottom: 32px; }
-.hap-sections-grid .hap-section-title { margin-bottom: 16px; }
-.hap-sections-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
-.hap-sections-grid .hap-section-title { grid-column: 1/-1; }
-
-.hap-section-card { background: var(--hap-card-bg); border-radius: var(--hap-radius); box-shadow: var(--hap-shadow); overflow: hidden; transition: var(--hap-transition); }
-.hap-section-card:hover { box-shadow: var(--hap-shadow-hover); transform: translateY(-2px); }
-.hap-section-card-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--hap-border); background: var(--hap-bg); }
-.hap-section-card-icon { font-size: 1.3rem; }
-.hap-section-card-title { margin: 0; font-size: .95rem; font-weight: 700; flex: 1; }
-.hap-section-card-meta { display: flex; gap: 6px; }
-.hap-section-card-body { padding: 16px 20px; }
-
-/* MODULE LIST */
-.hap-module-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.hap-module-item { display: flex; align-items: flex-start; gap: 8px; font-size: .88rem; }
-.hap-module-dot { flex-shrink: 0; }
-.hap-module-name { font-weight: 500; }
-.hap-module-hint { color: var(--hap-text-muted); font-size: .8rem; margin-left: 4px; }
-.hap-module-item.hap-incomplete .hap-module-name { color: var(--hap-text-muted); }
-
-/* TOOLS */
-.hap-tools-section { margin-bottom: 32px; }
-.hap-tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
-.hap-tool-card { display: flex; align-items: center; gap: 10px; background: var(--hap-card-bg); border: 1.5px solid var(--hap-border); border-radius: var(--hap-radius-sm); padding: 12px 16px; text-decoration: none; color: var(--hap-text); transition: var(--hap-transition); }
-.hap-tool-card:hover { border-color: var(--hap-cta); color: var(--hap-cta); box-shadow: var(--hap-shadow-hover); }
-.hap-tool-icon { font-size: 1.2rem; flex-shrink: 0; }
-.hap-tool-name { font-size: .85rem; font-weight: 500; }
-
-/* TAGS & BADGES */
-.hap-tag { display: inline-block; padding: 3px 10px; background: #f1f5f9; border-radius: 99px; font-size: .78rem; font-weight: 500; color: var(--hap-text); }
-.hap-tag-missing { background: #fef3c7; color: #92400e; }
-.hap-badge { display: inline-flex; align-items: center; padding: 3px 10px; background: #e8f4ff; color: var(--hap-blue); border-radius: 99px; font-size: .78rem; font-weight: 600; }
-.hap-badge-warning { background: #fef3c7; color: #92400e; }
-.hap-badge-planned { background: #f3e8ff; color: #7c3aed; }
-.hap-badge-sm { padding: 2px 8px; font-size: .72rem; border-radius: 99px; background: #e8f4ff; color: var(--hap-blue); font-weight: 600; }
-
-/* FORM */
-.hap-profile-form-section { margin-bottom: 32px; }
-.hap-profile-form-wrap { background: var(--hap-card-bg); border-radius: var(--hap-radius); box-shadow: var(--hap-shadow); padding: 28px; }
-.hap-form-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--hap-border); padding-bottom: 0; }
-.hap-form-tab { background: none; border: none; padding: 10px 18px; font-size: .9rem; font-weight: 600; color: var(--hap-text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: var(--hap-transition); }
-.hap-form-tab:hover, .hap-form-tab.active { color: var(--hap-cta); border-bottom-color: var(--hap-cta); }
-.hap-form-step { display: none; }
-.hap-form-step.active { display: block; }
-.hap-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
-.hap-form-field { display: flex; flex-direction: column; gap: 5px; }
-.hap-form-field label { font-size: .85rem; font-weight: 600; color: var(--hap-text); display: flex; align-items: center; gap: 5px; }
-.hap-input, .hap-select { padding: 9px 13px; border: 1.5px solid var(--hap-border); border-radius: var(--hap-radius-sm); font-size: .9rem; width: 100%; transition: var(--hap-transition); background: #fff; }
-.hap-input:focus, .hap-select:focus { outline: none; border-color: var(--hap-cta); box-shadow: 0 0 0 3px rgba(255,90,95,.12); }
-.hap-field-desc { font-size: .75rem; color: var(--hap-text-muted); }
-.hap-req-star { color: var(--hap-cta); }
-.hap-sensitive-tag { font-size: .75rem; opacity: .7; }
-.hap-form-footer { margin-top: 24px; display: flex; align-items: center; gap: 14px; padding-top: 20px; border-top: 1px solid var(--hap-border); }
-.hap-save-msg { font-size: .85rem; color: var(--hap-green); font-weight: 500; }
-.hap-save-msg.error { color: #dc2626; }
-
-/* DISCLAIMER BOX */
-.hap-disclaimer-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--hap-radius-sm); padding: 10px 14px; font-size: .82rem; color: #166534; margin-bottom: 14px; }
-.hap-disclaimer-symbolic { background: #faf5ff; border-color: #e9d5ff; color: #6b21a8; }
-
-/* SHARE PANEL */
-.hap-share-panel { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.hap-share-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
-.hap-share-modal { position: relative; background: #fff; border-radius: var(--hap-radius); padding: 32px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
-.hap-share-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--hap-text-muted); }
-.hap-share-close:hover { color: var(--hap-text); }
-.hap-share-modal h3 { margin: 0 0 8px; font-size: 1.2rem; }
-.hap-share-desc { color: var(--hap-text-muted); font-size: .88rem; margin-bottom: 20px; }
-.hap-share-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-.hap-share-check { display: flex; align-items: center; gap: 7px; font-size: .88rem; cursor: pointer; padding: 8px; border-radius: var(--hap-radius-sm); transition: var(--hap-transition); }
-.hap-share-check:hover { background: var(--hap-bg); }
-.hap-share-note { background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--hap-radius-sm); padding: 10px 14px; font-size: .82rem; color: #78350f; margin-bottom: 16px; }
-.hap-share-url-row { display: flex; gap: 8px; margin-bottom: 12px; }
-.hap-share-url-row input { flex: 1; padding: 9px 12px; border: 1.5px solid var(--hap-border); border-radius: var(--hap-radius-sm); font-size: .85rem; color: var(--hap-text-muted); }
-.hap-share-result { margin-top: 16px; padding: 16px; background: #f0fdf4; border-radius: var(--hap-radius-sm); }
-.hap-share-existing { margin-bottom: 16px; padding: 14px; background: var(--hap-bg); border-radius: var(--hap-radius-sm); }
-
-/* PUBLIC DASHBOARD */
-.hap-public-banner { background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: #fff; padding: 10px 20px; border-radius: var(--hap-radius-sm); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: .88rem; }
-.hap-hero-public { justify-content: center; text-align: center; flex-direction: column; }
-.hap-public-subtitle { color: var(--hap-text-muted); margin: 0 0 8px; font-size: .9rem; }
-.hap-public-stats { font-size: .82rem; color: var(--hap-text-muted); }
-.hap-public-footer { margin-top: 40px; text-align: center; color: var(--hap-text-muted); font-size: .82rem; }
-.hap-disclaimer { font-style: italic; }
-
-/* LOGIN PROMPT */
-.hap-login-prompt { display: flex; justify-content: center; padding: 40px 16px; }
-.hap-login-card { background: var(--hap-card-bg); border-radius: var(--hap-radius); box-shadow: var(--hap-shadow); padding: 48px 40px; text-align: center; max-width: 420px; width: 100%; }
-.hap-login-icon { font-size: 3rem; margin-bottom: 16px; }
-.hap-login-card h2 { margin: 0 0 12px; font-size: 1.5rem; }
-.hap-login-card p { color: var(--hap-text-muted); margin-bottom: 24px; }
-.hap-login-register { font-size: .85rem; margin-top: 14px; color: var(--hap-text-muted); }
-.hap-login-register a { color: var(--hap-cta); text-decoration: none; }
-.hap-notice { background: #fff8f0; border-left: 4px solid var(--hap-orange); padding: 12px 18px; border-radius: var(--hap-radius-sm); }
-.hap-muted-text { color: var(--hap-text-muted); font-size: .88rem; }
-
-/* ============================================================
-   AUTH FORMS — Kayıt & Giriş
-   ============================================================ */
-.hap-auth-wrap { max-width: 440px; margin: 0 auto; font-family: inherit; }
-.hap-register-wrap, .hap-login-wrap { padding: 8px 0; }
-
-.hap-auth-alert { padding: 12px 16px; border-radius: var(--hap-radius-sm); margin-bottom: 18px; font-size: .88rem; font-weight: 500; }
-.hap-auth-alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-.hap-auth-alert-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-
-/* Social Login */
-.hap-social-login { margin-bottom: 20px; }
-.hap-btn-google { background: #fff; color: #3c4043; border: 1.5px solid #dadce0; width: 100%; justify-content: center; padding: 11px 16px; font-size: .92rem; }
-.hap-btn-google:not([disabled]):hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-.hap-btn-placeholder { opacity: .7; cursor: not-allowed !important; }
-.hap-google-icon { display: flex; align-items: center; }
-.hap-coming-soon { font-size: .72rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 99px; margin-left: 4px; }
-
-.hap-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--hap-text-muted); font-size: .8rem; }
-.hap-divider::before, .hap-divider::after { content: ''; flex: 1; height: 1px; background: var(--hap-border); }
-
-/* Auth Form */
-.hap-auth-form { display: flex; flex-direction: column; gap: 16px; }
-.hap-input-wrap { position: relative; }
-.hap-input-wrap .hap-input { padding-right: 42px; }
-.hap-pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--hap-text-muted); padding: 0; line-height: 1; }
-.hap-pw-toggle:hover { color: var(--hap-text); }
-
-.hap-consent-field { background: var(--hap-bg); padding: 12px 14px; border-radius: var(--hap-radius-sm); }
-.hap-checkbox-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: .88rem; line-height: 1.5; }
-.hap-checkbox-label input[type=checkbox] { flex-shrink: 0; margin-top: 2px; accent-color: var(--hap-cta); width: 16px; height: 16px; }
-.hap-checkbox-label a { color: var(--hap-cta); }
-
-.hap-remember-row { display: flex; align-items: center; justify-content: space-between; }
-.hap-forgot-link { font-size: .83rem; color: var(--hap-text-muted); text-decoration: none; }
-.hap-forgot-link:hover { color: var(--hap-cta); }
-
-.hap-btn-full { width: 100%; justify-content: center; padding: 13px; font-size: .95rem; }
-
-.hap-info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--hap-radius-sm); padding: 10px 14px; font-size: .82rem; color: #1e40af; }
-
-/* Turnstile */
-.hap-turnstile-wrap { margin: 4px 0; }
-.hap-turnstile-placeholder { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: #f9fafb; border: 1.5px dashed var(--hap-border); border-radius: var(--hap-radius-sm); font-size: .82rem; color: var(--hap-text-muted); }
-.hap-turnstile-icon { font-size: 1.1rem; }
-
-/* Auth footer */
-.hap-auth-switch { text-align: center; margin: 4px 0 0; font-size: .85rem; color: var(--hap-text-muted); }
-.hap-auth-switch a { color: var(--hap-cta); text-decoration: none; font-weight: 600; }
-.hap-auth-disclaimer { text-align: center; font-size: .75rem; color: var(--hap-text-muted); margin: 0; padding: 0; }
-
-/* Ajax msg */
-.hap-ajax-msg { font-size: .85rem; min-height: 20px; font-weight: 500; }
-.hap-ajax-msg.error { color: #dc2626; }
-.hap-ajax-msg.success { color: var(--hap-green); }
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-	.hap-hero { flex-direction: column; text-align: center; }
-	.hap-hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; }
-	.hap-summary-grid { grid-template-columns: repeat(3, 1fr); }
-	.hap-sections-grid { grid-template-columns: 1fr; }
-	.hap-form-grid { grid-template-columns: 1fr; }
-	.hap-share-sections { grid-template-columns: 1fr; }
-	.hap-tools-grid { grid-template-columns: repeat(2, 1fr); }
-	.hap-share-modal { margin: 16px; }
+.hap-profile-app *,
+.hap-profile-app *::before,
+.hap-profile-app *::after {
+	box-sizing: border-box;
 }
-@media (max-width: 480px) {
-	.hap-summary-grid { grid-template-columns: repeat(2, 1fr); }
-	.hap-hero { padding: 20px; }
-	.hap-profile-form-wrap { padding: 18px; }
+
+.hap-profile-app .hap-dashboard,
+.hap-profile-app .hap-login-prompt,
+.hap-profile-app .hap-auth-wrap {
+	max-width: 1180px;
+	margin: 0 auto;
+}
+
+.hap-profile-app .hap-dashboard {
+	display: grid;
+	gap: 24px;
+}
+
+.hap-profile-app .hap-eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-radius: 999px;
+	background: rgba(255, 90, 95, 0.10);
+	color: var(--hap-cta);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.hap-profile-app .hap-hero-card,
+.hap-profile-app .hap-stat-card,
+.hap-profile-app .hap-section-card,
+.hap-profile-app .hap-profile-form-card,
+.hap-profile-app .hap-login-card,
+.hap-profile-app .hap-missing-card,
+.hap-profile-app .hap-share-modal,
+.hap-profile-app .hap-notice {
+	background: var(--hap-card-bg);
+	border: 1px solid var(--hap-border);
+	border-radius: var(--hap-radius-lg);
+	box-shadow: var(--hap-shadow);
+}
+
+.hap-profile-app .hap-hero-card {
+	display: grid;
+	grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.95fr);
+	gap: 24px;
+	padding: 28px;
+}
+
+.hap-profile-app .hap-hero-main {
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+}
+
+.hap-profile-app .hap-hero-avatar-wrap {
+	flex: 0 0 auto;
+}
+
+.hap-profile-app .hap-avatar {
+	display: block;
+	width: 88px;
+	height: 88px;
+	border-radius: 50%;
+	border: 4px solid rgba(255, 255, 255, 0.9);
+	box-shadow: 0 14px 30px rgba(255, 90, 95, 0.18);
+}
+
+.hap-profile-app .hap-hero-copy {
+	display: grid;
+	gap: 14px;
+	flex: 1;
+}
+
+.hap-profile-app .hap-hero-title,
+.hap-profile-app .hap-section-title,
+.hap-profile-app .hap-profile-form-title,
+.hap-profile-app .hap-login-card h2,
+.hap-profile-app .hap-share-modal h3 {
+	margin: 0;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-hero-title {
+	font-size: clamp(28px, 4vw, 38px);
+	line-height: 1.1;
+}
+
+.hap-profile-app .hap-hero-subtitle,
+.hap-profile-app .hap-section-copy,
+.hap-profile-app .hap-profile-form-copy,
+.hap-profile-app .hap-login-card p,
+.hap-profile-app .hap-share-desc {
+	margin: 0;
+	color: var(--hap-text-muted);
+	line-height: 1.6;
+}
+
+.hap-profile-app .hap-progress-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-progress-meta strong,
+.hap-profile-app .hap-hero-note strong,
+.hap-profile-app .hap-stat-value,
+.hap-profile-app .hap-hero-metric-value {
+	display: block;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-progress-meta span,
+.hap-profile-app .hap-hero-note span {
+	font-size: 14px;
+	color: var(--hap-text-muted);
+}
+
+.hap-profile-app .hap-progress-chip {
+	padding: 10px 12px;
+	border-radius: 14px;
+	background: #fff4f4;
+	color: var(--hap-cta);
+	font-size: 16px;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.hap-profile-app .hap-progress-bar {
+	width: 100%;
+	height: 12px;
+	border-radius: 999px;
+	background: #edf1f6;
+	overflow: hidden;
+}
+
+.hap-profile-app .hap-progress-fill {
+	height: 100%;
+	min-width: 0;
+	border-radius: inherit;
+	background: linear-gradient(90deg, #ff5a5f 0%, #ff8a7d 100%);
+	transition: width 0.35s ease;
+}
+
+.hap-profile-app .hap-hero-actions,
+.hap-profile-app .hap-form-footer,
+.hap-profile-app .hap-share-url-row {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.hap-profile-app .hap-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 46px;
+	padding: 0 18px;
+	border: 1px solid transparent;
+	border-radius: 14px;
+	font-size: 15px;
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.hap-profile-app .hap-btn:hover {
+	transform: translateY(-1px);
+}
+
+.hap-profile-app .hap-btn-primary {
+	background: var(--hap-cta);
+	color: #fff;
+	box-shadow: 0 14px 28px rgba(255, 90, 95, 0.22);
+}
+
+.hap-profile-app .hap-btn-primary:hover {
+	background: var(--hap-cta-dark);
+	color: #fff;
+}
+
+.hap-profile-app .hap-btn-secondary,
+.hap-profile-app .hap-btn-tertiary {
+	background: #fff;
+	border-color: var(--hap-border);
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-btn-secondary:hover,
+.hap-profile-app .hap-btn-tertiary:hover {
+	border-color: #ffc8ca;
+	color: var(--hap-cta);
+}
+
+.hap-profile-app .hap-btn-danger {
+	background: #fff;
+	border-color: #fecaca;
+	color: #b91c1c;
+}
+
+.hap-profile-app .hap-btn-danger:hover {
+	border-color: #ef4444;
+	color: #b91c1c;
+}
+
+.hap-profile-app .hap-btn-full,
+.hap-profile-app .hap-btn-lg {
+	width: 100%;
+}
+
+.hap-profile-app .hap-hero-aside {
+	display: grid;
+	gap: 18px;
+	padding: 22px;
+	border-radius: var(--hap-radius-md);
+	background: linear-gradient(180deg, #fff 0%, #fbfbfd 100%);
+	border: 1px solid var(--hap-border);
+	box-shadow: var(--hap-shadow-soft);
+}
+
+.hap-profile-app .hap-hero-metrics {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.hap-profile-app .hap-hero-metric,
+.hap-profile-app .hap-stat-card {
+	padding: 18px;
+	border-radius: 20px;
+	background: #f8fafc;
+	border: 1px solid #edf1f5;
+}
+
+.hap-profile-app .hap-hero-metric-label,
+.hap-profile-app .hap-stat-label {
+	display: block;
+	margin-top: 6px;
+	font-size: 13px;
+	color: var(--hap-text-muted);
+}
+
+.hap-profile-app .hap-hero-metric-value,
+.hap-profile-app .hap-stat-value {
+	font-size: clamp(22px, 3vw, 30px);
+	line-height: 1;
+}
+
+.hap-profile-app .hap-hero-note {
+	padding: 18px;
+	border-radius: 18px;
+	background: #172033;
+	color: #fff;
+}
+
+.hap-profile-app .hap-hero-note strong,
+.hap-profile-app .hap-hero-note span {
+	color: #fff;
+}
+
+.hap-profile-app .hap-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.hap-profile-app .hap-tone-accent {
+	background: linear-gradient(180deg, #fff 0%, #fff6f6 100%);
+}
+
+.hap-profile-app .hap-tone-success {
+	background: linear-gradient(180deg, #fff 0%, #f3fff7 100%);
+}
+
+.hap-profile-app .hap-tone-warning {
+	background: linear-gradient(180deg, #fff 0%, #fff8f1 100%);
+}
+
+.hap-profile-app .hap-tone-neutral {
+	background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+}
+
+.hap-profile-app .hap-section-heading {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-section-copy {
+	max-width: 520px;
+}
+
+.hap-profile-app .hap-sections-area {
+	display: grid;
+	gap: 18px;
+}
+
+.hap-profile-app .hap-sections-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 18px;
+}
+
+.hap-profile-app .hap-section-card {
+	padding: 22px;
+	display: grid;
+	gap: 18px;
+}
+
+.hap-profile-app .hap-section-card-top {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+}
+
+.hap-profile-app .hap-section-card-icon,
+.hap-profile-app .hap-share-check-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 46px;
+	height: 46px;
+	border-radius: 16px;
+	background: #fff1f2;
+	color: var(--hap-cta);
+	font-size: 14px;
+	font-weight: 800;
+	flex: 0 0 auto;
+}
+
+.hap-profile-app .hap-section-card-head {
+	display: grid;
+	gap: 6px;
+}
+
+.hap-profile-app .hap-section-card-title,
+.hap-profile-app .hap-form-step-head h4,
+.hap-profile-app .hap-missing-card h3 {
+	margin: 0;
+	font-size: 22px;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-section-card-copy,
+.hap-profile-app .hap-form-step-head p,
+.hap-profile-app .hap-missing-card p {
+	margin: 0;
+	color: var(--hap-text-muted);
+	line-height: 1.6;
+}
+
+.hap-profile-app .hap-section-card-stats,
+.hap-profile-app .hap-missing-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.hap-profile-app .hap-status-pill,
+.hap-profile-app .hap-chip,
+.hap-profile-app .hap-sensitive-tag,
+.hap-profile-app .hap-missing-summary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 8px 12px;
+	border-radius: 999px;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.hap-profile-app .hap-chip {
+	background: #f8fafc;
+	color: var(--hap-text);
+	border: 1px solid var(--hap-border);
+}
+
+.hap-profile-app .hap-ready {
+	background: var(--hap-success-bg);
+	color: var(--hap-success-text);
+}
+
+.hap-profile-app .hap-missing {
+	background: var(--hap-warning-bg);
+	color: var(--hap-warning-text);
+}
+
+.hap-profile-app .hap-optional {
+	background: var(--hap-optional-bg);
+	color: var(--hap-optional-text);
+}
+
+.hap-profile-app .hap-tool {
+	background: var(--hap-tool-bg);
+	color: var(--hap-tool-text);
+}
+
+.hap-profile-app .hap-section-progress {
+	display: grid;
+	gap: 8px;
+}
+
+.hap-profile-app .hap-section-progress-label {
+	font-size: 13px;
+	color: var(--hap-text-muted);
+}
+
+.hap-profile-app .hap-module-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 12px;
+}
+
+.hap-profile-app .hap-module-item {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 14px 0;
+	border-top: 1px solid #eff2f5;
+}
+
+.hap-profile-app .hap-module-item:first-child {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.hap-profile-app .hap-module-main {
+	flex: 1;
+	min-width: 0;
+}
+
+.hap-profile-app .hap-module-title-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.hap-profile-app .hap-module-name {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-module-hint {
+	margin: 8px 0 0;
+	font-size: 13px;
+	color: var(--hap-text-muted);
+	line-height: 1.5;
+}
+
+.hap-profile-app .hap-module-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 120px;
+	min-height: 40px;
+	padding: 0 14px;
+	border-radius: 12px;
+	background: #fff6f6;
+	color: var(--hap-cta);
+	font-size: 14px;
+	font-weight: 700;
+	text-decoration: none;
+	border: 1px solid #ffd6d8;
+	white-space: nowrap;
+}
+
+.hap-profile-app .hap-module-action.is-static {
+	background: #f9fafb;
+	border-color: var(--hap-border);
+	color: var(--hap-text-muted);
+}
+
+.hap-profile-app .hap-missing-card {
+	padding: 24px;
+	display: grid;
+	gap: 18px;
+}
+
+.hap-profile-app .hap-missing-card-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-missing-summary {
+	background: #fff4e8;
+	color: var(--hap-warning-text);
+}
+
+.hap-profile-app .hap-missing-module-list {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.hap-profile-app .hap-missing-module-item {
+	padding: 16px;
+	border-radius: 18px;
+	background: #fffaf5;
+	border: 1px solid #fde7cf;
+}
+
+.hap-profile-app .hap-missing-module-item strong,
+.hap-profile-app .hap-missing-module-item span {
+	display: block;
+}
+
+.hap-profile-app .hap-missing-module-item strong {
+	margin-bottom: 6px;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-missing-module-item span {
+	font-size: 13px;
+	color: var(--hap-text-muted);
+	line-height: 1.5;
+}
+
+.hap-profile-app .hap-profile-form-section {
+	display: grid;
+	gap: 18px;
+}
+
+.hap-profile-app .hap-profile-form-card {
+	padding: 28px;
+	display: grid;
+	gap: 20px;
+}
+
+.hap-profile-app .hap-profile-form-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.hap-profile-app .hap-profile-form-side-note {
+	padding: 12px 14px;
+	border-radius: 16px;
+	background: #f8fafc;
+	border: 1px solid var(--hap-border);
+	color: var(--hap-text-muted);
+	font-size: 14px;
+	max-width: 260px;
+}
+
+.hap-profile-app .hap-notice {
+	padding: 16px 18px;
+	border-radius: 18px;
+	font-size: 14px;
+	box-shadow: none;
+}
+
+.hap-profile-app .hap-notice-success {
+	background: #effcf4;
+	border-color: #bbf7d0;
+	color: #166534;
+}
+
+.hap-profile-app .hap-notice-error {
+	background: #fff1f2;
+	border-color: #fecdd3;
+	color: #be123c;
+}
+
+.hap-profile-app .hap-form-tabs {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.hap-profile-app .hap-form-tab {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 16px;
+	text-align: left;
+	background: #f8fafc;
+	border: 1px solid var(--hap-border);
+	border-radius: 18px;
+	cursor: pointer;
+	color: var(--hap-text);
+}
+
+.hap-profile-app .hap-form-tab.active {
+	background: #fff4f4;
+	border-color: #ffc8ca;
+	box-shadow: 0 10px 24px rgba(255, 90, 95, 0.10);
+}
+
+.hap-profile-app .hap-form-tab-step {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 12px;
+	background: #fff;
+	border: 1px solid var(--hap-border);
+	color: var(--hap-cta);
+	font-weight: 800;
+	flex: 0 0 auto;
+}
+
+.hap-profile-app .hap-form-tab-copy {
+	display: grid;
+	gap: 4px;
+}
+
+.hap-profile-app .hap-form-tab-copy strong {
+	font-size: 15px;
+}
+
+.hap-profile-app .hap-form-tab-copy small {
+	color: var(--hap-text-muted);
+	line-height: 1.5;
+}
+
+.hap-profile-app .hap-form-step {
+	display: none;
+	gap: 18px;
+}
+
+.hap-profile-app .hap-form-step.active {
+	display: grid;
+}
+
+.hap-profile-app .hap-form-step-head {
+	display: grid;
+	gap: 6px;
+}
+
+.hap-profile-app .hap-form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 18px;
+}
+
+.hap-profile-app .hap-form-field {
+	display: grid;
+	gap: 8px;
+}
+
+.hap-profile-app .hap-field-label {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-req-star {
+	color: var(--hap-cta);
+}
+
+.hap-profile-app .hap-sensitive-tag {
+	background: #f8fafc;
+	color: var(--hap-text-muted);
+	border: 1px solid var(--hap-border);
+	padding: 5px 10px;
+	font-size: 12px;
+}
+
+.hap-profile-app .hap-input,
+.hap-profile-app .hap-select,
+.hap-profile-app .hap-share-url-row input {
+	width: 100%;
+	min-height: 46px;
+	padding: 10px 14px;
+	border: 1px solid var(--hap-border);
+	border-radius: 12px;
+	background: #fff;
+	color: var(--hap-text-strong);
+	font-size: 15px;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hap-profile-app .hap-input:focus,
+.hap-profile-app .hap-select:focus,
+.hap-profile-app .hap-share-url-row input:focus {
+	outline: none;
+	border-color: var(--hap-cta);
+	box-shadow: 0 0 0 4px rgba(255, 90, 95, 0.12);
+}
+
+.hap-profile-app .hap-field-desc,
+.hap-profile-app .hap-save-msg {
+	font-size: 13px;
+	color: var(--hap-text-muted);
+	line-height: 1.5;
+}
+
+.hap-profile-app .hap-save-msg.error {
+	color: #b91c1c;
+}
+
+.hap-profile-app .hap-form-footer {
+	padding-top: 8px;
+	align-items: center;
+}
+
+.hap-profile-app .hap-share-panel {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+}
+
+.hap-profile-app .hap-share-panel.is-open {
+	display: flex;
+}
+
+.hap-profile-app .hap-share-overlay {
+	position: absolute;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.52);
+	backdrop-filter: blur(3px);
+}
+
+.hap-profile-app .hap-share-modal {
+	position: relative;
+	z-index: 1;
+	width: min(640px, 100%);
+	max-height: calc(100vh - 48px);
+	overflow: auto;
+	padding: 28px;
+	display: grid;
+	gap: 18px;
+}
+
+.hap-profile-app .hap-share-close {
+	position: absolute;
+	top: 18px;
+	right: 18px;
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	border: 1px solid var(--hap-border);
+	background: #fff;
+	color: var(--hap-text-muted);
+	font-size: 24px;
+	cursor: pointer;
+}
+
+.hap-profile-app .hap-share-sections {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.hap-profile-app .hap-share-check {
+	position: relative;
+	display: block;
+}
+
+.hap-profile-app .hap-share-check input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.hap-profile-app .hap-share-check-ui {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px;
+	border-radius: 18px;
+	border: 1px solid var(--hap-border);
+	background: #f8fafc;
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.hap-profile-app .hap-share-check input:checked + .hap-share-check-ui {
+	border-color: #ffc8ca;
+	background: #fff4f4;
+}
+
+.hap-profile-app .hap-share-note,
+.hap-profile-app .hap-share-existing {
+	padding: 16px;
+	border-radius: 18px;
+}
+
+.hap-profile-app .hap-share-note {
+	background: #fff8ec;
+	border: 1px solid #fde7cf;
+	color: #9a3412;
+}
+
+.hap-profile-app .hap-share-existing {
+	background: #f8fafc;
+	border: 1px solid var(--hap-border);
+}
+
+.hap-profile-app .hap-share-result {
+	padding: 16px;
+	border-radius: 18px;
+	background: #effcf4;
+	border: 1px solid #bbf7d0;
+}
+
+.hap-profile-app .hap-login-prompt {
+	padding: 20px 0;
+}
+
+.hap-profile-app .hap-login-card {
+	max-width: 760px;
+	margin: 0 auto;
+	padding: 34px;
+	display: grid;
+	gap: 20px;
+	background:
+		radial-gradient(circle at top right, rgba(255, 90, 95, 0.12), transparent 32%),
+		#ffffff;
+}
+
+.hap-profile-app .hap-login-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 68px;
+	height: 68px;
+	border-radius: 22px;
+	background: #fff1f2;
+	color: var(--hap-cta);
+	font-size: 28px;
+	font-weight: 800;
+}
+
+.hap-profile-app .hap-login-benefits {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.hap-profile-app .hap-login-benefit {
+	padding: 16px;
+	border-radius: 18px;
+	background: #f8fafc;
+	border: 1px solid var(--hap-border);
+}
+
+.hap-profile-app .hap-login-benefit strong {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-login-actions {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.hap-profile-app .hap-login-register {
+	margin: 0;
+	font-size: 14px;
+	color: var(--hap-text-muted);
+}
+
+.hap-profile-app .hap-login-register a {
+	color: var(--hap-cta);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.hap-modal-open {
+	overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+	.hap-profile-app .hap-hero-card,
+	.hap-profile-app .hap-section-heading,
+	.hap-profile-app .hap-profile-form-head {
+		grid-template-columns: 1fr;
+		display: grid;
+	}
+
+	.hap-profile-app .hap-stats-grid,
+	.hap-profile-app .hap-sections-grid,
+	.hap-profile-app .hap-missing-module-list,
+	.hap-profile-app .hap-login-benefits {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 767px) {
+	.hap-profile-app {
+		padding: 20px 12px 40px;
+	}
+
+	.hap-profile-app .hap-hero-card,
+	.hap-profile-app .hap-section-card,
+	.hap-profile-app .hap-profile-form-card,
+	.hap-profile-app .hap-login-card,
+	.hap-profile-app .hap-missing-card,
+	.hap-profile-app .hap-share-modal {
+		padding: 20px;
+		border-radius: 20px;
+	}
+
+	.hap-profile-app .hap-hero-main,
+	.hap-profile-app .hap-progress-meta,
+	.hap-profile-app .hap-missing-card-head {
+		flex-direction: column;
+	}
+
+	.hap-profile-app .hap-hero-metrics,
+	.hap-profile-app .hap-stats-grid,
+	.hap-profile-app .hap-sections-grid,
+	.hap-profile-app .hap-form-grid,
+	.hap-profile-app .hap-form-tabs,
+	.hap-profile-app .hap-share-sections,
+	.hap-profile-app .hap-missing-module-list,
+	.hap-profile-app .hap-login-benefits {
+		grid-template-columns: 1fr;
+	}
+
+	.hap-profile-app .hap-section-heading,
+	.hap-profile-app .hap-profile-form-head {
+		display: grid;
+	}
+
+	.hap-profile-app .hap-btn,
+	.hap-profile-app .hap-module-action,
+	.hap-profile-app .hap-share-url-row .hap-btn {
+		width: 100%;
+	}
+
+	.hap-profile-app .hap-module-item,
+	.hap-profile-app .hap-hero-actions,
+	.hap-profile-app .hap-form-footer,
+	.hap-profile-app .hap-login-actions,
+	.hap-profile-app .hap-share-url-row {
+		flex-direction: column;
+	}
 }
