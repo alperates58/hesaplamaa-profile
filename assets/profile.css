@@ -1243,6 +1243,110 @@
 	max-width: 640px;
 }
 
+/* Suggestion action rows */
+.hap-profile-app .hap-suggestion-action {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 14px 16px;
+	border-radius: 14px;
+	background: #fff8f8;
+	border: 1px solid #ffe4e4;
+	width: 100%;
+}
+
+.hap-profile-app .hap-suggestion-action.is-complete {
+	background: var(--hap-success-bg);
+	border-color: #bbf7d0;
+}
+
+.hap-profile-app .hap-suggestion-dot {
+	flex: 0 0 8px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--hap-cta);
+	margin-top: 6px;
+}
+
+.hap-profile-app .hap-suggestion-action.is-complete .hap-suggestion-dot {
+	background: var(--hap-success-text);
+}
+
+.hap-profile-app .hap-suggestion-text {
+	flex: 1;
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--hap-text);
+}
+
+.hap-profile-app .hap-suggestion-cta {
+	flex: 0 0 auto;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--hap-cta);
+	text-decoration: none;
+	white-space: nowrap;
+	padding: 4px 10px;
+	border-radius: 8px;
+	background: rgba(255, 90, 95, 0.08);
+}
+
+.hap-profile-app .hap-suggestion-cta:hover {
+	background: rgba(255, 90, 95, 0.15);
+}
+
+.hap-profile-app .hap-suggestion-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+/* Allow chip-only suggestion lists to wrap */
+.hap-profile-app .hap-suggestion-list:has(.hap-missing-chip) {
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+/* Analysis card states */
+.hap-profile-app .hap-analysis-card.is-open {
+	border-left: 3px solid #22c55e;
+}
+
+.hap-profile-app .hap-analysis-card.is-locked {
+	opacity: 0.88;
+}
+
+.hap-profile-app .hap-analysis-card.is-upcoming {
+	opacity: 0.65;
+	background: #f8fafc;
+}
+
+/* Upcoming status pill */
+.hap-profile-app .hap-status-pill.hap-upcoming {
+	background: #eff6ff;
+	color: #1d4ed8;
+	font-size: 12px;
+	font-weight: 700;
+	padding: 4px 10px;
+	border-radius: 999px;
+	white-space: nowrap;
+}
+
+/* Section card icon — emoji-based, not text abbreviation */
+.hap-profile-app .hap-section-card-icon {
+	font-size: 28px;
+	line-height: 1;
+	flex: 0 0 auto;
+	padding: 8px;
+}
+
+/* Profile form section spacer */
+.hap-profile-app .hap-profile-form-section {
+	display: grid;
+	gap: 20px;
+}
+
 @media (max-width: 980px) {
 	.hap-profile-app .hap-onboarding-hero,
 	.hap-profile-app .hap-summary-layout,
@@ -1254,5 +1358,14 @@
 
 	.hap-profile-app .hap-onboarding-steps {
 		grid-template-columns: 1fr;
+	}
+
+	.hap-profile-app .hap-suggestion-action {
+		flex-wrap: wrap;
+	}
+
+	.hap-profile-app .hap-suggestion-cta {
+		width: 100%;
+		text-align: center;
 	}
 }
