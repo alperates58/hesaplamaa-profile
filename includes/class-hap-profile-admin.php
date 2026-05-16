@@ -209,7 +209,6 @@ class HAP_Profile_Admin {
 		$updater->save_settings( array(
 			'repo'   => $_POST['hap_updater_repo']   ?? '',
 			'branch' => $_POST['hap_updater_branch'] ?? 'main',
-			'token'  => $_POST['hap_updater_token']  ?? '',
 		) );
 		add_settings_error( 'hap_profile', 'saved', 'GitHub güncelleme ayarları kaydedildi.', 'updated' );
 	}
@@ -1195,22 +1194,21 @@ class HAP_Profile_Admin {
 	}
 
 	private function render_updater_tab() {
-		$updater  = new HAP_Profile_Updater();
-		$s        = $updater->get_settings();
-		$notice   = $updater->get_update_notice( true );
-		$last_sha = (string) get_option( 'hap_profile_last_update_sha', '' );
-		$last_upd = (string) get_option( 'hap_profile_last_update', '' );
-		$last_err = $updater->get_last_update_error();
-		$debug    = $updater->get_last_update_debug();
-
-		$update_result = isset( $_GET['update'] ) ? sanitize_key( $_GET['update'] ) : '';
+		$updater     = new HAP_Profile_Updater();
+		$s           = $updater->get_settings();
+		$notice      = $updater->get_update_notice( true );
+		$last_sha    = (string) get_option( 'hap_profile_last_update_sha', '' );
+		$last_upd    = (string) get_option( 'hap_profile_last_update', '' );
+		$last_backup = (string) get_option( 'hap_profile_last_backup_path', '' );
+		$last_err    = $updater->get_last_update_error();
+		$debug       = $updater->get_last_update_debug();
 		?>
 		<h2>GitHub'dan Güncelle</h2>
 
 		<?php if ( $notice ) : ?>
 		<div class="notice notice-<?php echo $notice['type'] === 'success' ? 'success' : 'error'; ?> is-dismissible">
 			<p>
-				<?php if ( $notice['type'] === 'success' ) : ?>✅<?php else : ?>❌<?php endif; ?>
+				<?php if ( $notice['type'] === 'success' ) : ?>&#x2705;<?php else : ?>&#x274C;<?php endif; ?>
 				<strong><?php echo esc_html( $notice['message'] ); ?></strong>
 				<span style="color:#888;font-size:.85em;margin-left:8px"><?php echo esc_html( $notice['time'] ); ?></span>
 			</p>
@@ -1218,32 +1216,10 @@ class HAP_Profile_Admin {
 		<?php endif; ?>
 
 		<!-- SON GÜNCELLEME DURUMU -->
-		<div class="hap-updater-status-box" style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;padding:16px 20px;margin-bottom:20px;max-width:700px">
+		<div class="hap-updater-status-box" style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;padding:16px 20px;margin-bottom:20px;max-width:760px">
 			<table style="width:100%;border-collapse:collapse">
 				<tr>
-					<td style="width:180px;padding:4px 0;color:#555;font-weight:600">Mevcut Sürüm</td>
-					<td><code><?php echo esc_html( HAP_Profile_Updater::get_version_string() ); ?></code></td>
-				</tr>
-				<tr>
-					<td style="padding:4px 0;color:#555;font-weight:600">Son Güncelleme SHA</td>
-					<td>
-						<?php if ( $last_sha ) : ?>
-						<code><?php echo esc_html( substr( $last_sha, 0, 7 ) ); ?></code>
-						<?php if ( ! empty( $s['repo'] ) ) : ?>
-						<a href="https://github.com/<?php echo esc_attr( $s['repo'] ); ?>/commit/<?php echo esc_attr( $last_sha ); ?>"
-						   target="_blank" style="margin-left:8px;font-size:.82rem">GitHub'da Gör ↗</a>
-						<?php endif; ?>
-						<?php else : ?>
-						<span style="color:#aaa">—</span>
-						<?php endif; ?>
-					</td>
-				</tr>
-				<tr>
-					<td style="padding:4px 0;color:#555;font-weight:600">Son Güncelleme Tarihi</td>
-					<td><?php echo $last_upd ? esc_html( $last_upd ) : '<span style="color:#aaa">—</span>'; ?></td>
-				</tr>
-				<tr>
-					<td style="padding:4px 0;color:#555;font-weight:600">Repo</td>
+					<td style="width:200px;padding:5px 0;color:#555;font-weight:600">Repo</td>
 					<td>
 						<?php if ( ! empty( $s['repo'] ) ) : ?>
 						<a href="https://github.com/<?php echo esc_attr( $s['repo'] ); ?>" target="_blank">
@@ -1255,25 +1231,68 @@ class HAP_Profile_Admin {
 					</td>
 				</tr>
 				<tr>
-					<td style="padding:4px 0;color:#555;font-weight:600">Branch</td>
+					<td style="padding:5px 0;color:#555;font-weight:600">Branch</td>
 					<td><code><?php echo esc_html( $s['branch'] ?: 'main' ); ?></code></td>
 				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Mevcut Eklenti Sürümü</td>
+					<td><code><?php echo esc_html( HAP_Profile_Updater::get_version_string() ); ?></code></td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Son GitHub SHA</td>
+					<td>
+						<?php if ( $last_sha ) : ?>
+						<code><?php echo esc_html( substr( $last_sha, 0, 7 ) ); ?></code>
+						<?php if ( ! empty( $s['repo'] ) ) : ?>
+						<a href="https://github.com/<?php echo esc_attr( $s['repo'] ); ?>/commit/<?php echo esc_attr( $last_sha ); ?>"
+						   target="_blank" style="margin-left:8px;font-size:.82rem">GitHub'da Gör &#x2197;</a>
+						<?php endif; ?>
+						<?php else : ?>
+						<span style="color:#aaa">&#x2014;</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Son Güncelleme Zamanı</td>
+					<td><?php echo $last_upd ? esc_html( $last_upd ) : '<span style="color:#aaa">&#x2014;</span>'; ?></td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Son Backup Yolu</td>
+					<td>
+						<?php if ( $last_backup ) : ?>
+						<code style="font-size:.82rem;word-break:break-all"><?php echo esc_html( $last_backup ); ?></code>
+						<?php if ( is_dir( $last_backup ) ) : ?>
+						<span style="color:green;margin-left:6px">&#x2714; Mevcut</span>
+						<?php else : ?>
+						<span style="color:#c00;margin-left:6px">&#x26A0; Klasör bulunamadı</span>
+						<?php endif; ?>
+						<?php else : ?>
+						<span style="color:#aaa">&#x2014;</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+				<?php if ( $last_err ) : ?>
+				<tr>
+					<td style="padding:5px 0;color:#c00;font-weight:600">Son Hata</td>
+					<td style="color:#c00"><?php echo esc_html( $last_err ); ?></td>
+				</tr>
+				<?php endif; ?>
 			</table>
 		</div>
 
-		<!-- GÜNCELLE BUTONU -->
+		<!-- BUTONLAR -->
 		<?php if ( ! empty( $s['repo'] ) ) : ?>
-		<div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap">
+		<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="hap-update-form">
 				<?php wp_nonce_field( 'hap_update_from_github', '_wpnonce' ); ?>
 				<input type="hidden" name="action" value="hap_update_from_github">
 				<button type="submit" class="button button-primary button-hero" id="hap-do-update"
-				        onclick="return confirm('GitHub\'tan en son sürüm indirilip mevcut dosyaların üzerine yazılacak. Devam edilsin mi?')">
-					⬇️ GitHub\'dan Şimdi Güncelle
+				        onclick="return confirm('GitHub\'tan en son surum indirilip mevcut dosyalarin uzerine yazilacak ve oncesinde otomatik backup alinacak. Devam edilsin mi?')">
+					GitHub'dan Simdi Guncelle
 				</button>
 			</form>
 			<button type="button" class="button button-secondary" id="hap-check-version">
-				🔍 Son Commit\'i Kontrol Et
+				Son Commit'i Kontrol Et
 			</button>
 			<span id="hap-version-result" style="font-size:.88rem;color:#555"></span>
 		</div>
@@ -1281,11 +1300,33 @@ class HAP_Profile_Admin {
 		<div class="notice notice-warning inline"><p>Güncelleme butonu için önce aşağıdan repo ayarlarını kaydedin.</p></div>
 		<?php endif; ?>
 
+		<!-- BACKUP'TAN GERİ DÖN -->
+		<?php if ( $last_backup && is_dir( $last_backup ) ) : ?>
+		<div style="margin-bottom:24px">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="hap-rollback-form">
+				<?php wp_nonce_field( 'hap_rollback_from_backup', '_wpnonce' ); ?>
+				<input type="hidden" name="action" value="hap_rollback_from_backup">
+				<button type="submit" class="button button-secondary"
+				        onclick="return confirm('Son backup\'tan geri yukleme yapilacak: <?php echo esc_js( basename( $last_backup ) ); ?>. Mevcut surumun uzerine yazilacak. Devam?')">
+					Son Backup'tan Geri Don
+				</button>
+				<span style="margin-left:8px;font-size:.82rem;color:#888"><?php echo esc_html( basename( $last_backup ) ); ?></span>
+			</form>
+		</div>
+		<?php elseif ( $last_backup ) : ?>
+		<div class="notice notice-warning inline" style="margin-bottom:16px">
+			<p>Son kaydedilen backup yolu artık mevcut değil, geri dönüş yapılamaz.</p>
+		</div>
+		<?php endif; ?>
+
 		<!-- AYARLAR FORMU -->
 		<form method="post" action="">
 			<?php wp_nonce_field( 'hap_admin_action', 'hap_nonce' ); ?>
 			<input type="hidden" name="hap_action" value="save_updater">
 			<h3>Güncelleme Ayarları</h3>
+			<p class="description" style="margin-bottom:12px">
+				Sadece public GitHub repoları desteklenir. Token/private repo desteği yoktur.
+			</p>
 			<table class="form-table" style="max-width:700px">
 				<tr>
 					<th>GitHub Repo <span style="color:red">*</span></th>
@@ -1293,7 +1334,10 @@ class HAP_Profile_Admin {
 						<input type="text" name="hap_updater_repo"
 						       value="<?php echo esc_attr( $s['repo'] ); ?>"
 						       class="regular-text" placeholder="kullanici/hesaplamaa-profile">
-						<p class="description">Format: <code>kullanici_adi/repo_adi</code> — Örn: <code>alperates58/hesaplamaa-profile</code></p>
+						<p class="description">
+							Yalnızca <code>kullanici_adi/repo_adi</code> formatı kabul edilir.<br>
+							Örn: <code>alperates58/hesaplamaa-profile</code> — URL, token veya query param girilmesin.
+						</p>
 					</td>
 				</tr>
 				<tr>
@@ -1302,18 +1346,9 @@ class HAP_Profile_Admin {
 						<input type="text" name="hap_updater_branch"
 						       value="<?php echo esc_attr( $s['branch'] ?: 'main' ); ?>"
 						       class="small-text" placeholder="main">
-						<p class="description">Güncellemelerin çekileceği branch. Genellikle <code>main</code> veya <code>master</code>.</p>
-					</td>
-				</tr>
-				<tr>
-					<th>GitHub Token (İsteğe Bağlı)</th>
-					<td>
-						<input type="password" name="hap_updater_token"
-						       value="<?php echo esc_attr( $s['token'] ); ?>"
-						       class="regular-text" autocomplete="new-password" placeholder="ghp_...">
 						<p class="description">
-							Özel (private) repo için gereklidir. Public repo için boş bırakın.<br>
-							Token en az <code>repo</code> veya <code>contents:read</code> iznine sahip olmalıdır.
+							Yalnızca harf, sayı, <code>-</code>, <code>_</code> ve <code>.</code> içerebilir.<br>
+							Genellikle <code>main</code> veya <code>master</code>.
 						</p>
 					</td>
 				</tr>
@@ -1321,24 +1356,17 @@ class HAP_Profile_Admin {
 			<?php submit_button( 'Ayarları Kaydet' ); ?>
 		</form>
 
-		<!-- HATA / DEBUG -->
-		<?php if ( $last_err ) : ?>
-		<div style="margin-top:24px">
-			<h3 style="color:#c00">Son Güncelleme Hatası</h3>
-			<div class="notice notice-error inline"><p><?php echo esc_html( $last_err ); ?></p></div>
-		</div>
-		<?php endif; ?>
-
+		<!-- DEBUG BİLGİSİ -->
 		<?php if ( ! empty( $debug ) ) : ?>
 		<div style="margin-top:16px">
-			<h3>Debug Bilgisi <small style="font-weight:400;color:#888">(son güncelleme)</small></h3>
+			<h3>Son Debug Bilgileri <small style="font-weight:400;color:#888">(son güncelleme/rollback)</small></h3>
 			<table class="widefat striped" style="max-width:800px">
-				<thead><tr><th>Anahtar</th><th>Değer</th></tr></thead>
+				<thead><tr><th style="width:200px">Anahtar</th><th>Değer</th></tr></thead>
 				<tbody>
 				<?php foreach ( $debug as $k => $v ) : ?>
 				<tr>
 					<td><code><?php echo esc_html( $k ); ?></code></td>
-					<td><?php echo esc_html( $v ); ?></td>
+					<td style="word-break:break-all"><?php echo esc_html( $v ); ?></td>
 				</tr>
 				<?php endforeach; ?>
 				</tbody>
@@ -1357,20 +1385,24 @@ class HAP_Profile_Admin {
 					action: 'hap_check_github_version',
 					nonce: hapAdmin.nonce
 				}, function(res){
-					$btn.prop('disabled', false).text('🔍 Son Commit\'i Kontrol Et');
+					$btn.prop('disabled', false).text("Son Commit'i Kontrol Et");
 					if(res.success){
-						$res.html('✅ GitHub\'daki son commit: <strong>' + res.data.sha + '</strong>');
+						$res.html('GitHub son commit: <strong>' + res.data.sha + '</strong>');
 					} else {
-						$res.html('❌ ' + (res.data || 'Hata oluştu.'));
+						$res.html('Hata: ' + (res.data || 'Bilinmeyen hata.'));
 					}
 				}).fail(function(){
-					$btn.prop('disabled', false).text('🔍 Son Commit\'i Kontrol Et');
-					$res.text('❌ Bağlantı hatası.');
+					$btn.prop('disabled', false).text("Son Commit'i Kontrol Et");
+					$res.text('Baglanti hatasi.');
 				});
 			});
 
 			$('#hap-do-update').closest('form').on('submit', function(){
-				$('#hap-do-update').prop('disabled', true).text('⬇️ Güncelleniyor... (lütfen bekleyin)');
+				$('#hap-do-update').prop('disabled', true).text('Guncelleniyor... (lutfen bekleyin)');
+			});
+
+			$('#hap-rollback-form').on('submit', function(){
+				$(this).find('button[type=submit]').prop('disabled', true).text('Geri yukleniyor...');
 			});
 		});
 		</script>
