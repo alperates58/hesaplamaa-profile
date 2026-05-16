@@ -12,17 +12,14 @@ class HAP_Profile_Activator {
 		flush_rewrite_rules();
 	}
 
-	/**
-	 * Mevcut verileri koruyarak yeni sütunları güvenli şekilde ekler.
-	 * Her sürüm yükseltmesinde çalışır.
-	 */
 	public static function run_migrations() {
 		global $wpdb;
 
 		self::load_results_store();
+		self::load_fields_store();
 
-		$table         = $wpdb->prefix . HAP_TABLE_MODULES;
-		$table_exists  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		$table        = $wpdb->prefix . HAP_TABLE_MODULES;
+		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
 
 		if ( $table_exists !== $table ) {
 			self::create_tables();
@@ -34,15 +31,20 @@ class HAP_Profile_Activator {
 		);
 
 		$new_columns = array(
-			'runner_type'     => "ALTER TABLE `{$table}` ADD COLUMN `runner_type` VARCHAR(40) NOT NULL DEFAULT 'none' AFTER `availability_status`",
-			'input_mapping'   => "ALTER TABLE `{$table}` ADD COLUMN `input_mapping` LONGTEXT AFTER `runner_type`",
-			'output_mapping'  => "ALTER TABLE `{$table}` ADD COLUMN `output_mapping` LONGTEXT AFTER `input_mapping`",
-			'runner_callback' => "ALTER TABLE `{$table}` ADD COLUMN `runner_callback` VARCHAR(255) NOT NULL DEFAULT '' AFTER `output_mapping`",
-			'ajax_action'     => "ALTER TABLE `{$table}` ADD COLUMN `ajax_action` VARCHAR(190) NOT NULL DEFAULT '' AFTER `runner_callback`",
-			'result_selector' => "ALTER TABLE `{$table}` ADD COLUMN `result_selector` TEXT AFTER `ajax_action`",
-			'tool_url'        => "ALTER TABLE `{$table}` ADD COLUMN `tool_url` TEXT AFTER `result_selector`",
-			'runner_status'   => "ALTER TABLE `{$table}` ADD COLUMN `runner_status` VARCHAR(80) NOT NULL DEFAULT '' AFTER `tool_url`",
-			'runner_notes'    => "ALTER TABLE `{$table}` ADD COLUMN `runner_notes` TEXT AFTER `runner_status`",
+			'runner_type'                => "ALTER TABLE `{$table}` ADD COLUMN `runner_type` VARCHAR(40) NOT NULL DEFAULT 'none' AFTER `availability_status`",
+			'input_mapping'              => "ALTER TABLE `{$table}` ADD COLUMN `input_mapping` LONGTEXT AFTER `runner_type`",
+			'output_mapping'             => "ALTER TABLE `{$table}` ADD COLUMN `output_mapping` LONGTEXT AFTER `input_mapping`",
+			'runner_callback'            => "ALTER TABLE `{$table}` ADD COLUMN `runner_callback` VARCHAR(255) NOT NULL DEFAULT '' AFTER `output_mapping`",
+			'ajax_action'                => "ALTER TABLE `{$table}` ADD COLUMN `ajax_action` VARCHAR(190) NOT NULL DEFAULT '' AFTER `runner_callback`",
+			'result_selector'            => "ALTER TABLE `{$table}` ADD COLUMN `result_selector` TEXT AFTER `ajax_action`",
+			'tool_url'                   => "ALTER TABLE `{$table}` ADD COLUMN `tool_url` TEXT AFTER `result_selector`",
+			'runner_status'              => "ALTER TABLE `{$table}` ADD COLUMN `runner_status` VARCHAR(80) NOT NULL DEFAULT '' AFTER `tool_url`",
+			'runner_notes'               => "ALTER TABLE `{$table}` ADD COLUMN `runner_notes` TEXT AFTER `runner_status`",
+			'optional_fields'            => "ALTER TABLE `{$table}` ADD COLUMN `optional_fields` LONGTEXT AFTER `required_fields`",
+			'result_enabled'             => "ALTER TABLE `{$table}` ADD COLUMN `result_enabled` TINYINT(1) NOT NULL DEFAULT 1 AFTER `availability_status`",
+			'onboarding_prompt_enabled'  => "ALTER TABLE `{$table}` ADD COLUMN `onboarding_prompt_enabled` TINYINT(1) NOT NULL DEFAULT 1 AFTER `result_enabled`",
+			'ai_include'                 => "ALTER TABLE `{$table}` ADD COLUMN `ai_include` TINYINT(1) NOT NULL DEFAULT 1 AFTER `onboarding_prompt_enabled`",
+			'share_include_default'      => "ALTER TABLE `{$table}` ADD COLUMN `share_include_default` TINYINT(1) NOT NULL DEFAULT 0 AFTER `ai_include`",
 		);
 
 		foreach ( $new_columns as $col => $sql ) {
@@ -55,6 +57,15 @@ class HAP_Profile_Activator {
 			HAP_Profile_Results_Store::create_table();
 		}
 
+		if ( class_exists( 'HAP_Profile_Fields' ) ) {
+			if ( ! get_option( HAP_Profile_Fields::FIELDS_OPTION, false ) ) {
+				update_option( HAP_Profile_Fields::FIELDS_OPTION, HAP_Profile_Fields::get_default_fields_config(), false );
+			}
+			if ( ! get_option( HAP_Profile_Fields::STEPS_OPTION, false ) ) {
+				update_option( HAP_Profile_Fields::STEPS_OPTION, HAP_Profile_Fields::get_default_steps_config(), false );
+			}
+		}
+
 		update_option( 'hap_profile_db_version', HAP_VERSION );
 	}
 
@@ -64,6 +75,7 @@ class HAP_Profile_Activator {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		self::load_results_store();
+		self::load_fields_store();
 
 		$modules_table = $wpdb->prefix . HAP_TABLE_MODULES;
 		$sql_modules   = "CREATE TABLE {$modules_table} (
@@ -74,19 +86,25 @@ class HAP_Profile_Activator {
 			section VARCHAR(80) NOT NULL DEFAULT '',
 			profile_status VARCHAR(40) NOT NULL DEFAULT 'disabled',
 			required_fields LONGTEXT,
+			optional_fields LONGTEXT,
 			missing_fields_behavior VARCHAR(40) NOT NULL DEFAULT 'show_prompt',
 			ai_enabled TINYINT(1) NOT NULL DEFAULT 0,
 			sort_order INT NOT NULL DEFAULT 0,
 			notes TEXT,
 			source VARCHAR(40) NOT NULL DEFAULT 'manual',
 			availability_status VARCHAR(40) NOT NULL DEFAULT 'active',
+			result_enabled TINYINT(1) NOT NULL DEFAULT 1,
+			onboarding_prompt_enabled TINYINT(1) NOT NULL DEFAULT 1,
+			ai_include TINYINT(1) NOT NULL DEFAULT 1,
+			share_include_default TINYINT(1) NOT NULL DEFAULT 0,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			PRIMARY KEY (id),
 			UNIQUE KEY slug (slug),
 			KEY section (section),
 			KEY profile_status (profile_status),
-			KEY availability_status (availability_status)
+			KEY availability_status (availability_status),
+			KEY result_enabled (result_enabled)
 		) {$charset_collate};";
 
 		$shares_table = $wpdb->prefix . HAP_TABLE_SHARES;
@@ -122,9 +140,9 @@ class HAP_Profile_Activator {
 		global $wpdb;
 
 		self::load_results_store();
+		self::load_fields_store();
 
 		$db_version = get_option( 'hap_profile_db_version', '0' );
-
 		if ( version_compare( $db_version, HAP_VERSION, '<' ) ) {
 			return true;
 		}
@@ -144,12 +162,34 @@ class HAP_Profile_Activator {
 			return true;
 		}
 
+		$module_columns = array_column(
+			$wpdb->get_results( "SHOW COLUMNS FROM `{$modules_table}`", ARRAY_A ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			'Field'
+		);
+		foreach ( array( 'optional_fields', 'result_enabled', 'onboarding_prompt_enabled', 'ai_include', 'share_include_default' ) as $required_col ) {
+			if ( ! in_array( $required_col, $module_columns, true ) ) {
+				return true;
+			}
+		}
+
+		if ( class_exists( 'HAP_Profile_Fields' ) ) {
+			if ( ! get_option( HAP_Profile_Fields::FIELDS_OPTION, false ) || ! get_option( HAP_Profile_Fields::STEPS_OPTION, false ) ) {
+				return true;
+			}
+		}
+
 		return false;
 	}
 
 	private static function load_results_store() {
 		if ( ! class_exists( 'HAP_Profile_Results_Store' ) && is_readable( HAP_PLUGIN_DIR . 'includes/class-hap-profile-results-store.php' ) ) {
 			require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-results-store.php';
+		}
+	}
+
+	private static function load_fields_store() {
+		if ( ! class_exists( 'HAP_Profile_Fields' ) && is_readable( HAP_PLUGIN_DIR . 'includes/class-hap-profile-fields.php' ) ) {
+			require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-fields.php';
 		}
 	}
 
@@ -183,7 +223,6 @@ class HAP_Profile_Activator {
 			'updater_status'              => 'not_configured',
 		);
 		add_option( 'hap_profile_updater_settings', $default_updater );
-
 		add_option( 'hap_profile_delete_on_uninstall', 0 );
 	}
 }

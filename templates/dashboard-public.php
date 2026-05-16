@@ -49,6 +49,7 @@ $visible      = ! empty( $visible_sections ) ? $visible_sections : array_keys( $
 			$section_modules = $modules->get_modules( array(
 				'section'        => $sec_key,
 				'profile_status' => 'profile_core',
+				'result_enabled' => 1,
 				'limit'          => 10,
 			) );
 			if ( empty( $section_modules ) ) continue;

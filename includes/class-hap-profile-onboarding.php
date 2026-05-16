@@ -14,63 +14,25 @@ class HAP_Profile_Onboarding {
 	}
 
 	public function get_steps() {
-		return array(
-			'basic'      => array(
-				'id'          => 'basic',
-				'number'      => 1,
-				'title'       => 'Kisisel profilini olusturalim',
-				'subtitle'    => 'Birkac temel bilgiyle sana ozel analiz panelini hazirlayacagiz.',
-				'description' => 'Ilk dashboard kilidini acmak icin temel profil bilgilerini tamamla.',
-				'fields'      => array( 'nickname', 'birth_date', 'gender', 'city' ),
-				'optional'    => false,
-				'why'         => 'Bu bilgiler temel analiz kategorilerini acmak ve paneli sana gore hazirlamak icin kullanilir.',
-				'cta'         => 'Kaydet ve Devam Et',
-			),
-			'health'     => array(
-				'id'          => 'health',
-				'number'      => 2,
-				'title'       => 'Gunluk yasam analizlerini acalim',
-				'subtitle'    => 'Saglik ve aktivite kartlarini kullanabilmek icin yasam verilerini ekle.',
-				'description' => 'Boy, kilo ve aktivite duzeyi bilgileri saglik ve spor analizleri icin onceliklidir.',
-				'fields'      => array( 'height', 'weight', 'activity_level', 'sleep_hours', 'daily_steps' ),
-				'optional'    => true,
-				'why'         => 'Ozellikle boy, kilo ve aktivite seviyesi bilgileri olmadan saglik ve spor kartlari kilitli kalir.',
-				'cta'         => 'Saglik Bilgilerini Kaydet',
-			),
-			'astrology'  => array(
-				'id'          => 'astrology',
-				'number'      => 3,
-				'title'       => 'Dogum haritani detaylandiralim',
-				'subtitle'    => 'Astrolojik detaylari acmak icin dogum saati ve dogum yeri gerekiyor.',
-				'description' => 'Dogum saati ve yeri, yukselen burc ve ev yerlesimleri gibi detayli analizler icin gereklidir.',
-				'fields'      => array( 'birth_time', 'birth_place' ),
-				'optional'    => true,
-				'why'         => 'Temel burc yorumlari icin dogum tarihi yeterli olabilir; ama detayli harita yorumlari icin bu adim gerekir.',
-				'cta'         => 'Astroloji Bilgilerini Kaydet',
-			),
-			'numerology' => array(
-				'id'          => 'numerology',
-				'number'      => 4,
-				'title'       => 'Numeroloji profilini olusturalim',
-				'subtitle'    => 'Isim temelli numeroloji kartlari icin ad ve soyad bilgilerini ekle.',
-				'description' => 'Ad ve soyad bilgileri isim temelli numeroloji analizleri icin kullanilir.',
-				'fields'      => array( 'first_name', 'last_name' ),
-				'optional'    => true,
-				'why'         => 'Isim bazli numeroloji kartlari bu bilgi olmadan hazir durumuna gecmez.',
-				'cta'         => 'Numeroloji Bilgilerini Kaydet',
-			),
-			'complete'   => array(
-				'id'          => 'complete',
-				'number'      => 5,
-				'title'       => 'Profilin hazir',
-				'subtitle'    => 'Artik kisisel analiz panelini acabiliriz.',
-				'description' => 'Temel profilin tamamlandi. Diledigin zaman eksik alanlari panel icinden tamamlayabilirsin.',
-				'fields'      => array(),
-				'optional'    => false,
-				'why'         => 'Ana panelde hangi analizlerin hazir oldugunu ve hangi bilgilerle yeni kartlar acabilecegini goreceksin.',
-				'cta'         => 'Analiz panelimi ac',
-			),
-		);
+		$steps = array();
+		foreach ( HAP_Profile_Fields::get_active_steps() as $index => $step ) {
+			$steps[ $step['step_key'] ] = array(
+				'id'             => $step['step_key'],
+				'number'         => $index + 1,
+				'title'          => $step['title'],
+				'subtitle'       => $step['description'],
+				'description'    => $step['description'],
+				'fields'         => wp_list_pluck( HAP_Profile_Fields::get_fields_by_step( $step['step_key'] ), 'field_key' ),
+				'optional'       => empty( $step['is_required'] ),
+				'why'            => $step['description'],
+				'cta'            => empty( $step['is_required'] ) ? 'Kaydet ve Devam Et' : 'Kaydet ve Devam Et',
+				'icon'           => $step['icon'],
+				'completion_rule'=> $step['completion_rule'],
+				'is_required'    => ! empty( $step['is_required'] ),
+				'active'         => ! empty( $step['active'] ),
+			);
+		}
+		return $steps;
 	}
 
 	public function get_step_order() {
@@ -83,67 +45,70 @@ class HAP_Profile_Onboarding {
 	}
 
 	public function get_field_options( $key ) {
-		switch ( $key ) {
-			case 'gender':
-				return array(
-					''           => '- Seciniz -',
-					'male'       => 'Erkek',
-					'female'     => 'Kadin',
-					'other'      => 'Diger',
-					'prefer_not' => 'Belirtmek istemiyorum',
-				);
-			case 'activity_level':
-				return array(
-					''            => '- Seciniz -',
-					'sedentary'   => 'Hareketsiz',
-					'light'       => 'Hafif aktif',
-					'moderate'    => 'Orta aktif',
-					'active'      => 'Aktif',
-					'very_active' => 'Cok aktif',
-				);
-			default:
-				return array();
-		}
+		return HAP_Profile_Fields::get_field_options( $key );
 	}
 
 	public function get_step_fields( $step_id ) {
+		return HAP_Profile_Fields::get_fields_by_step( $step_id );
+	}
+
+	public function is_step_complete( $user_id, $step_id, array $profile = array() ) {
 		$step = $this->get_step( $step_id );
 		if ( ! $step ) {
-			return array();
+			return false;
 		}
 
-		$fields = array();
-		foreach ( $step['fields'] as $key ) {
-			$field = $this->fields->get_field_by_key( $key );
-			if ( $field ) {
-				$fields[] = $field;
+		if ( empty( $profile ) ) {
+			$profile = $this->user_data->get_user_profile_data( $user_id );
+		}
+
+		$fields = $this->get_step_fields( $step_id );
+		if ( empty( $fields ) ) {
+			return true;
+		}
+
+		$filled = 0;
+		foreach ( $fields as $field ) {
+			if ( $this->user_data->is_field_filled( $field['field_key'], $profile ) ) {
+				$filled++;
 			}
 		}
 
-		return $fields;
+		if ( 'any_field' === $step['completion_rule'] ) {
+			return $filled > 0;
+		}
+
+		return $filled === count( $fields );
 	}
 
 	public function get_initial_step( $user_id ) {
 		$user_id = absint( $user_id );
-		if ( ! $this->user_data->is_minimum_profile_complete( $user_id ) ) {
-			return 'basic';
-		}
-
 		$profile = $this->user_data->get_user_profile_data( $user_id );
-		foreach ( array( 'health', 'astrology', 'numerology' ) as $step_id ) {
-			$has_content = false;
-			foreach ( $this->get_step( $step_id )['fields'] as $field_key ) {
-				if ( $this->user_data->is_field_filled( $field_key, $profile ) ) {
-					$has_content = true;
-					break;
-				}
+
+		foreach ( $this->get_step_order() as $step_id ) {
+			$step = $this->get_step( $step_id );
+			if ( ! $step || empty( $step['active'] ) ) {
+				continue;
 			}
-			if ( ! $has_content ) {
+
+			if ( ! $this->is_step_complete( $user_id, $step_id, $profile ) ) {
 				return $step_id;
 			}
 		}
 
-		return 'complete';
+		$order = $this->get_step_order();
+		return ! empty( $order ) ? end( $order ) : 'basic_profile';
+	}
+
+	public function are_required_steps_complete( $user_id ) {
+		$profile = $this->user_data->get_user_profile_data( $user_id );
+		foreach ( $this->get_step_order() as $step_id ) {
+			$step = $this->get_step( $step_id );
+			if ( ! empty( $step['is_required'] ) && ! $this->is_step_complete( $user_id, $step_id, $profile ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public function handle_save_step() {
@@ -156,7 +121,7 @@ class HAP_Profile_Onboarding {
 		$step_id = isset( $_POST['step'] ) ? sanitize_key( wp_unslash( $_POST['step'] ) ) : '';
 		$step    = $this->get_step( $step_id );
 
-		if ( ! $step || 'complete' === $step_id ) {
+		if ( ! $step ) {
 			wp_send_json_error( array( 'message' => 'Gecersiz onboarding adimi.' ) );
 		}
 
@@ -172,29 +137,33 @@ class HAP_Profile_Onboarding {
 		$this->user_data->save_user_data( $user_id, $data );
 
 		$profile = $this->user_data->get_user_profile_data( $user_id );
-		if ( 'basic' === $step_id ) {
-			$missing = $this->user_data->get_minimum_profile_missing_fields( $user_id, $profile );
-			if ( ! empty( $missing ) ) {
-				wp_send_json_error(
-					array(
-						'message'        => 'Temel profil alanlarini tamamlaman gerekiyor.',
-						'missing_fields' => $missing,
-					)
-				);
-			}
+		if ( ! empty( $step['is_required'] ) && ! $this->is_step_complete( $user_id, $step_id, $profile ) ) {
+			wp_send_json_error(
+				array(
+					'message'        => 'Gerekli alanlari tamamlaman gerekiyor.',
+					'missing_fields' => array_values(
+						array_filter(
+							$step['fields'],
+							function ( $field_key ) use ( $profile ) {
+								return empty( $profile[ $field_key ] ) && '0' !== (string) ( $profile[ $field_key ] ?? '' );
+							}
+						)
+					),
+				)
+			);
 		}
 
 		$order         = $this->get_step_order();
 		$current_index = array_search( $step_id, $order, true );
-		$next_step     = false !== $current_index && isset( $order[ $current_index + 1 ] ) ? $order[ $current_index + 1 ] : 'complete';
+		$next_step     = false !== $current_index && isset( $order[ $current_index + 1 ] ) ? $order[ $current_index + 1 ] : $step_id;
 
 		wp_send_json_success(
 			array(
-				'message'              => 'Onboarding adimi kaydedildi.',
-				'next_step'            => $next_step,
-				'minimum_complete'     => $this->user_data->is_minimum_profile_complete( $user_id, $profile ),
-				'minimum_completion'   => $this->user_data->get_minimum_profile_completion( $user_id, $profile ),
-				'missing_minimum'      => $this->user_data->get_minimum_profile_missing_fields( $user_id, $profile ),
+				'message'            => 'Onboarding adimi kaydedildi.',
+				'next_step'          => $next_step,
+				'minimum_complete'   => $this->user_data->is_minimum_profile_complete( $user_id, $profile ),
+				'minimum_completion' => $this->user_data->get_minimum_profile_completion( $user_id, $profile ),
+				'missing_minimum'    => $this->user_data->get_minimum_profile_missing_fields( $user_id, $profile ),
 			)
 		);
 	}

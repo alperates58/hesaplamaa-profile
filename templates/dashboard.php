@@ -23,7 +23,7 @@ $minimum_missing    = $user_data->get_minimum_profile_missing_fields( $user_id, 
 $field_labels       = $user_data->get_field_labels();
 
 // Sadece profile_core ve profile_optional — tool_only tamamen hariç.
-$all_modules      = $modules->get_modules( array( 'availability_status' => 'active', 'limit' => 500 ) );
+$all_modules      = $modules->get_modules( array( 'availability_status' => 'active', 'result_enabled' => 1, 'limit' => 500 ) );
 $analysis_modules = array_values( array_filter(
 	$all_modules,
 	function ( $m ) {
@@ -60,6 +60,9 @@ foreach ( $runner_results as $slug => $runner_item ) {
 	$grouped_items[ $section ][] = $runner_item;
 
 	if ( 'missing_fields' === $state ) {
+		if ( empty( $module['onboarding_prompt_enabled'] ) ) {
+			continue;
+		}
 		foreach ( $runner_item['missing'] as $missing_key ) {
 			$missing_frequency[ $missing_key ] = ( $missing_frequency[ $missing_key ] ?? 0 ) + 1;
 		}

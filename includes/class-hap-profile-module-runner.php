@@ -332,6 +332,7 @@ class HAP_Profile_Module_Runner {
 			$modules     = $modules_obj->get_modules(
 				array(
 					'availability_status' => 'active',
+					'result_enabled'      => 1,
 					'limit'               => 500,
 				)
 			);
@@ -353,6 +354,9 @@ class HAP_Profile_Module_Runner {
 
 		$results = array();
 		foreach ( $modules as $module ) {
+			if ( empty( $module['result_enabled'] ) ) {
+				continue;
+			}
 			$results[ $module['slug'] ] = self::run_module_for_user( $module, $user_id, $profile );
 		}
 		return $results;

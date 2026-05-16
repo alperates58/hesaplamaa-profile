@@ -66,7 +66,7 @@ class HAP_Profile_Render {
 			return $this->render_public_profile_by_token( $share_token );
 		}
 
-		if ( ! $this->user_data->is_minimum_profile_complete( $user_id ) ) {
+		if ( ! HAP_Profile_Fields::is_minimum_profile_complete( $user_id ) || ! $this->onboarding->are_required_steps_complete( $user_id ) ) {
 			return $this->render_onboarding_for_user( $user_id );
 		}
 

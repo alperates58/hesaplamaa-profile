@@ -19,7 +19,7 @@ $current_index      = false !== $initial_index ? (int) $initial_index : 0;
 $progress_percent   = (int) round( ( $current_index / max( count( $step_order ) - 1, 1 ) ) * 100 );
 $minimum_completion = $user_data->get_minimum_profile_completion( $user_id, $profile );
 $minimum_missing    = $user_data->get_minimum_profile_missing_fields( $user_id, $profile );
-$sensitive_keys     = $fields->get_sensitive_keys();
+$sensitive_keys     = HAP_Profile_Fields::get_sensitive_keys();
 ?>
 <div class="hap-profile-app">
 	<div class="hap-dashboard hap-onboarding-shell" data-initial-step="<?php echo esc_attr( $initial_step ); ?>" data-dashboard-url="<?php echo esc_url( $dashboard_url ); ?>">
@@ -59,7 +59,7 @@ $sensitive_keys     = $fields->get_sensitive_keys();
 				<?php foreach ( $step_order as $step_id ) : ?>
 					<?php $step = $steps[ $step_id ]; ?>
 					<button type="button" class="hap-onboarding-step-pill <?php echo $step_id === $initial_step ? 'is-active' : ''; ?>" data-step-target="<?php echo esc_attr( $step_id ); ?>" role="tab" aria-selected="<?php echo $step_id === $initial_step ? 'true' : 'false'; ?>">
-						<span class="hap-onboarding-step-no">0<?php echo esc_html( $step['number'] ); ?></span>
+						<span class="hap-onboarding-step-no"><?php echo esc_html( str_pad( (string) $step['number'], 2, '0', STR_PAD_LEFT ) ); ?></span>
 						<span class="hap-onboarding-step-text"><?php echo esc_html( $step['title'] ); ?></span>
 					</button>
 				<?php endforeach; ?>
@@ -74,7 +74,7 @@ $sensitive_keys     = $fields->get_sensitive_keys();
 					<section class="hap-onboarding-panel <?php echo $step_id === $initial_step ? 'is-active' : ''; ?>" data-step-panel="<?php echo esc_attr( $step_id ); ?>" data-step-index="<?php echo esc_attr( $index ); ?>">
 						<div class="hap-onboarding-panel-head">
 							<div>
-								<span class="hap-eyebrow">Adim 0<?php echo esc_html( $step['number'] ); ?></span>
+								<span class="hap-eyebrow">Adim <?php echo esc_html( str_pad( (string) $step['number'], 2, '0', STR_PAD_LEFT ) ); ?></span>
 								<h2 class="hap-section-title"><?php echo esc_html( $step['title'] ); ?></h2>
 							</div>
 							<p class="hap-section-copy"><?php echo esc_html( $step['subtitle'] ); ?></p>
@@ -85,66 +85,60 @@ $sensitive_keys     = $fields->get_sensitive_keys();
 							<p><?php echo esc_html( $step['why'] ); ?></p>
 						</div>
 
-						<?php if ( 'complete' !== $step_id ) : ?>
-							<form class="hap-onboarding-form" data-step-form="<?php echo esc_attr( $step_id ); ?>">
-								<div class="hap-form-grid hap-onboarding-grid">
-									<?php foreach ( $step_fields as $field ) : ?>
-										<?php
-										$key        = $field['key'];
-										$value      = $profile[ $key ] ?? '';
-										$field_id   = 'hap-onboarding-' . $step_id . '-' . $key;
-										$options    = $onboarding->get_field_options( $key );
-										$is_private = in_array( $key, $sensitive_keys, true );
-										?>
-										<div class="hap-form-field">
-											<label for="<?php echo esc_attr( $field_id ); ?>" class="hap-field-label">
-												<span><?php echo esc_html( $field['label'] ); ?></span>
-												<?php if ( $is_private ) : ?>
-													<span class="hap-sensitive-tag">Kilitli</span>
-												<?php endif; ?>
-											</label>
-
-											<?php if ( 'select' === $field['type'] ) : ?>
-												<select id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" class="hap-select">
-													<?php foreach ( $options as $option_value => $option_label ) : ?>
-														<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
-													<?php endforeach; ?>
-												</select>
-											<?php elseif ( 'date' === $field['type'] ) : ?>
-												<input type="date" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input">
-											<?php elseif ( 'time' === $field['type'] ) : ?>
-												<input type="time" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input">
-											<?php elseif ( 'number' === $field['type'] ) : ?>
-												<input type="number" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input" step="0.1">
-											<?php elseif ( 'tel' === $field['type'] ) : ?>
-												<input type="tel" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input">
-											<?php else : ?>
-												<input type="text" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input">
+						<form class="hap-onboarding-form" data-step-form="<?php echo esc_attr( $step_id ); ?>">
+							<div class="hap-form-grid hap-onboarding-grid">
+								<?php foreach ( $step_fields as $field ) : ?>
+									<?php
+									$key        = $field['field_key'];
+									$value      = $profile[ $key ] ?? '';
+									$field_id   = 'hap-onboarding-' . $step_id . '-' . $key;
+									$options    = HAP_Profile_Fields::get_field_options( $key );
+									$is_private = in_array( $key, $sensitive_keys, true );
+									?>
+									<div class="hap-form-field">
+										<label for="<?php echo esc_attr( $field_id ); ?>" class="hap-field-label">
+											<span><?php echo esc_html( $field['label'] ); ?></span>
+											<?php if ( $is_private ) : ?>
+												<span class="hap-sensitive-tag">Kilitli</span>
 											<?php endif; ?>
+										</label>
 
-											<small class="hap-field-desc"><?php echo esc_html( ! empty( $field['description'] ) ? $field['description'] : $step['description'] ); ?></small>
-										</div>
-									<?php endforeach; ?>
-								</div>
+										<?php if ( 'select' === $field['type'] ) : ?>
+											<select id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" class="hap-select">
+												<option value="">- Seciniz -</option>
+												<?php foreach ( $options as $option_value => $option_label ) : ?>
+													<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
+												<?php endforeach; ?>
+											</select>
+										<?php elseif ( 'date' === $field['type'] ) : ?>
+											<input type="date" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input">
+										<?php elseif ( 'time' === $field['type'] ) : ?>
+											<input type="time" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input">
+										<?php elseif ( 'number' === $field['type'] ) : ?>
+											<input type="number" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input" step="0.1">
+										<?php elseif ( 'tel' === $field['type'] ) : ?>
+											<input type="tel" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input">
+										<?php else : ?>
+											<input type="text" id="<?php echo esc_attr( $field_id ); ?>" name="profile_data[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="hap-input" placeholder="<?php echo esc_attr( $field['placeholder'] ); ?>">
+										<?php endif; ?>
 
-								<div class="hap-onboarding-feedback" aria-live="polite"></div>
-
-								<div class="hap-onboarding-actions">
-									<?php if ( $index > 0 ) : ?>
-										<button type="button" class="hap-btn hap-btn-secondary" data-step-back="<?php echo esc_attr( $step_id ); ?>">Geri</button>
-									<?php endif; ?>
-									<?php if ( ! empty( $step['optional'] ) ) : ?>
-										<button type="button" class="hap-btn hap-btn-tertiary" data-step-skip="<?php echo esc_attr( $step_id ); ?>">Bu adimi atla</button>
-									<?php endif; ?>
-									<button type="button" class="hap-btn hap-btn-primary" data-step-save="<?php echo esc_attr( $step_id ); ?>"><?php echo esc_html( $step['cta'] ); ?></button>
-								</div>
-							</form>
-						<?php else : ?>
-							<div class="hap-onboarding-complete">
-								<p class="hap-section-copy"><?php echo esc_html( $step['description'] ); ?></p>
-								<a href="<?php echo esc_url( $dashboard_url ); ?>" class="hap-btn hap-btn-primary" data-open-dashboard><?php echo esc_html( $step['cta'] ); ?></a>
+										<small class="hap-field-desc"><?php echo esc_html( $field['help_text'] ?: $step['description'] ); ?></small>
+									</div>
+								<?php endforeach; ?>
 							</div>
-						<?php endif; ?>
+
+							<div class="hap-onboarding-feedback" aria-live="polite"></div>
+
+							<div class="hap-onboarding-actions">
+								<?php if ( $index > 0 ) : ?>
+									<button type="button" class="hap-btn hap-btn-secondary" data-step-back="<?php echo esc_attr( $step_id ); ?>">Geri</button>
+								<?php endif; ?>
+								<?php if ( ! empty( $step['optional'] ) ) : ?>
+									<button type="button" class="hap-btn hap-btn-tertiary" data-step-skip="<?php echo esc_attr( $step_id ); ?>">Bu adimi atla</button>
+								<?php endif; ?>
+								<button type="button" class="hap-btn hap-btn-primary" data-step-save="<?php echo esc_attr( $step_id ); ?>"><?php echo esc_html( $step['cta'] ); ?></button>
+							</div>
+						</form>
 					</section>
 				<?php endforeach; ?>
 			</div>
