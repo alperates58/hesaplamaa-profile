@@ -1409,6 +1409,97 @@
 	text-decoration: underline;
 }
 
+.hap-profile-app .hap-featured-results {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 18px;
+}
+
+.hap-profile-app .hap-result-card--featured {
+	background: linear-gradient(180deg, #fff 0%, #f6fffa 100%);
+	border-color: #d8f5e3;
+	box-shadow: 0 18px 40px rgba(2, 122, 72, 0.08);
+}
+
+.hap-profile-app .hap-result-card--featured .hap-result-value {
+	padding: 18px;
+}
+
+.hap-profile-app .hap-result-card--featured .hap-result-value-text {
+	font-size: clamp(28px, 4vw, 38px);
+	line-height: 1.05;
+}
+
+.hap-profile-app .hap-result-card--featured .hap-result-unit {
+	font-size: 12px;
+	opacity: 0.85;
+}
+
+.hap-profile-app .hap-result-card--featured .hap-result-warning {
+	font-size: 10px;
+	opacity: 0.8;
+}
+
+.hap-profile-app .hap-result-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.hap-profile-app .hap-result-filter {
+	padding: 10px 14px;
+	border-radius: 999px;
+	border: 1px solid var(--hap-border);
+	background: #fff;
+	color: var(--hap-text-strong);
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.hap-profile-app .hap-result-filter.is-active {
+	background: #fff1f2;
+	border-color: #ffc8ca;
+	color: var(--hap-cta);
+}
+
+.hap-profile-app .hap-results-grid--main {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hap-profile-app .hap-collapsible {
+	background: transparent;
+}
+
+.hap-profile-app .hap-collapsible-summary {
+	list-style: none;
+	cursor: pointer;
+}
+
+.hap-profile-app .hap-collapsible-summary::-webkit-details-marker {
+	display: none;
+}
+
+.hap-profile-app .hap-results-grid--pending .hap-result-card--pending {
+	background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+	opacity: 0.82;
+	border-style: dashed;
+}
+
+.hap-profile-app .hap-analysis-card-grid--compact {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hap-profile-app .hap-analysis-card--mini {
+	padding: 18px;
+	box-shadow: var(--hap-shadow-soft);
+}
+
+.hap-profile-app .hap-analysis-card--mini .hap-section-card-copy {
+	font-size: 13px;
+	line-height: 1.45;
+}
+
 /* Profile form section spacer */
 .hap-profile-app .hap-profile-form-section {
 	display: grid;
@@ -1420,7 +1511,9 @@
 	.hap-profile-app .hap-summary-layout,
 	.hap-profile-app .hap-analysis-card-grid,
 	.hap-profile-app .hap-results-grid,
-	.hap-profile-app .hap-related-tools {
+	.hap-profile-app .hap-related-tools,
+	.hap-profile-app .hap-featured-results,
+	.hap-profile-app .hap-analysis-card-grid--compact {
 		grid-template-columns: 1fr;
 	}
 

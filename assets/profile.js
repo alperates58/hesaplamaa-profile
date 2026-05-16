@@ -10,6 +10,7 @@
 			this.initShare();
 			this.initScrollLinks();
 			this.initCopyButtons();
+			this.initResultFilters();
 		},
 
 		initFormTabs: function () {
@@ -260,6 +261,22 @@
 					$input.trigger('select');
 					document.execCommand('copy');
 				});
+			});
+		},
+
+		initResultFilters: function () {
+			$(document).on('click', '.hap-result-filter', function () {
+				const filter = $(this).data('resultFilter');
+				$('.hap-result-filter').removeClass('is-active');
+				$(this).addClass('is-active');
+
+				if (filter === 'all') {
+					$('[data-result-category]').show();
+					return;
+				}
+
+				$('[data-result-category]').hide();
+				$('[data-result-category="' + filter + '"]').show();
 			});
 		}
 	};

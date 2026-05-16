@@ -686,6 +686,59 @@ class HAP_Profile_Fields {
 		return $field ? $field['label'] : $key;
 	}
 
+	public static function normalize_display_title( $title ) {
+		$title = trim( (string) $title );
+		if ( '' === $title ) {
+			return '';
+		}
+
+		$replacements = array(
+			'Tarihine Gore' => 'Tarihine Göre',
+			'Gunluk'        => 'Günlük',
+			'Gun '          => 'Gün ',
+			'Dogum'         => 'Doğum',
+			'Donemi'        => 'Dönemi',
+			'Yerlesimi'     => 'Yerleşimi',
+			'Burçu'         => 'Burcu',
+			'Cocuk'         => 'Çocuk',
+			'Dugumleri'     => 'Düğümleri',
+			'Yukselen'      => 'Yükselen',
+			'Jupiter'       => 'Jüpiter',
+			'Saturn'        => 'Satürn',
+			'Ask'           => 'Aşk',
+			'Indeksi'       => 'İndeksi',
+			'Orani'         => 'Oranı',
+			'Kalca'         => 'Kalça',
+			'Cakra'         => 'Çakra',
+			'Sansli'        => 'Şanslı',
+			'Tas'           => 'Taş',
+			'Cin'           => 'Çin',
+			'Esi'           => 'Eşi',
+			'Ihtiyaci'      => 'İhtiyacı',
+			'Ihtiyacı'      => 'İhtiyacı',
+			'Burc'          => 'Burç',
+		);
+
+		$title = strtr( $title, $replacements );
+		$title = preg_replace( '/\s+/', ' ', $title );
+
+		return trim( $title );
+	}
+
+	public static function humanize_module_title( $slug_or_title ) {
+		$text = trim( (string) $slug_or_title );
+		if ( '' === $text ) {
+			return '';
+		}
+
+		if ( false !== strpos( $text, '-' ) || false !== strpos( $text, '_' ) ) {
+			$text = str_replace( array( '-', '_' ), ' ', sanitize_title( $text ) );
+			$text = ucwords( preg_replace( '/\s+/', ' ', $text ) );
+		}
+
+		return self::normalize_display_title( $text );
+	}
+
 	private static function normalize_field_config( array $field ) {
 		$field_key   = sanitize_key( $field['field_key'] ?? $field['key'] ?? '' );
 		$options_raw = $field['options'] ?? array();

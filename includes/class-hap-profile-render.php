@@ -5,15 +5,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! function_exists( 'hap_profile_humanize_slug' ) ) {
 	function hap_profile_humanize_slug( $slug ) {
-		$slug = sanitize_title( (string) $slug );
-		if ( '' === $slug ) {
-			return '';
-		}
-
-		$human = str_replace( array( '-', '_' ), ' ', $slug );
-		$human = preg_replace( '/\s+/', ' ', $human );
-
-		return ucwords( trim( $human ) );
+		return class_exists( 'HAP_Profile_Fields' )
+			? HAP_Profile_Fields::humanize_module_title( $slug )
+			: ucwords( trim( preg_replace( '/\s+/', ' ', str_replace( array( '-', '_' ), ' ', sanitize_title( (string) $slug ) ) ) ) );
 	}
 }
 
