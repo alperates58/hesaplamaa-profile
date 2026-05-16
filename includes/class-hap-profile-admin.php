@@ -368,6 +368,18 @@ class HAP_Profile_Admin {
 		}
 
 		$req    = isset( $_POST['required_fields'] ) ? array_map( 'sanitize_key', (array) $_POST['required_fields'] ) : array();
+
+		// input_mapping / output_mapping JSON olarak saklanır.
+		$input_mapping  = sanitize_textarea_field( wp_unslash( $_POST['input_mapping'] ?? '' ) );
+		$output_mapping = sanitize_textarea_field( wp_unslash( $_POST['output_mapping'] ?? '' ) );
+		// Geçerli JSON değilse boş bırak.
+		if ( '' !== $input_mapping && null === json_decode( $input_mapping ) ) {
+			$input_mapping = '';
+		}
+		if ( '' !== $output_mapping && null === json_decode( $output_mapping ) ) {
+			$output_mapping = '';
+		}
+
 		$update = array_merge( $existing, array(
 			'profile_status'          => sanitize_key( $_POST['profile_status'] ?? $existing['profile_status'] ),
 			'section'                 => sanitize_key( $_POST['section'] ?? $existing['section'] ),
@@ -375,12 +387,79 @@ class HAP_Profile_Admin {
 			'missing_fields_behavior' => sanitize_key( $_POST['missing_fields_behavior'] ?? $existing['missing_fields_behavior'] ),
 			'ai_enabled'              => ! empty( $_POST['ai_enabled'] ) ? 1 : 0,
 			'sort_order'              => absint( $_POST['sort_order'] ?? $existing['sort_order'] ),
-			'notes'                   => sanitize_textarea_field( $_POST['notes'] ?? '' ),
+			'notes'                   => sanitize_textarea_field( wp_unslash( $_POST['notes'] ?? '' ) ),
 			'availability_status'     => sanitize_key( $_POST['availability_status'] ?? $existing['availability_status'] ),
+			// Runner alanları.
+			'runner_type'             => sanitize_key( $_POST['runner_type'] ?? ( $existing['runner_type'] ?? 'none' ) ),
+			'input_mapping'           => $input_mapping,
+			'output_mapping'          => $output_mapping,
+			'runner_callback'         => sanitize_text_field( wp_unslash( $_POST['runner_callback'] ?? '' ) ),
+			'ajax_action'             => sanitize_key( $_POST['ajax_action'] ?? '' ),
+			'result_selector'         => sanitize_text_field( wp_unslash( $_POST['result_selector'] ?? '' ) ),
+			'tool_url'                => esc_url_raw( wp_unslash( $_POST['tool_url'] ?? '' ) ),
+			'runner_status'           => sanitize_key( $_POST['runner_status'] ?? '' ),
+			'runner_notes'            => sanitize_textarea_field( wp_unslash( $_POST['runner_notes'] ?? '' ) ),
 		) );
 
 		$this->modules->save_module( $update, $id );
 		wp_send_json_success( array( 'message' => 'Modül kaydedildi.' ) );
+	}
+
+	/**
+	 * Seçili modüllere MVP mapping presetlerini uygular.
+	 */
+	public function ajax_apply_runner_presets() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		$presets = HAP_Profile_Module_Runner::get_preset_mappings();
+		$applied = 0;
+
+		foreach ( $presets as $slug => $preset ) {
+			$module = $this->modules->get_module_by_slug( $slug );
+			if ( ! $module ) {
+				continue;
+			}
+			$update = array_merge( $module, array(
+				'runner_type'     => $preset['runner_type'],
+				'required_fields' => $preset['required_fields'],
+				'input_mapping'   => $preset['input_mapping'],
+				'runner_notes'    => $preset['runner_notes'],
+			) );
+			$this->modules->save_module( $update, $module['id'] );
+			$applied++;
+		}
+
+		wp_send_json_success( array(
+			'message' => sprintf( '%d modüle preset uygulandı.', $applied ),
+			'applied' => $applied,
+		) );
+	}
+
+	/**
+	 * Suite Inspector ile seçili modül slug'larını tarar ve rapor döner.
+	 */
+	public function ajax_inspect_suite_modules() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		if ( HAP_Profile_Suite_Inspector::suite_unavailable() ) {
+			wp_send_json_error( array( 'message' => 'Hesaplama Suite bulunamadı veya HC_PLUGIN_DIR tanımsız.' ) );
+		}
+
+		$slugs = array_map( 'sanitize_title', (array) ( $_POST['slugs'] ?? array() ) );
+		if ( empty( $slugs ) ) {
+			// Tüm profil modüllerini tara.
+			$results = HAP_Profile_Suite_Inspector::inspect_all_profile_modules();
+		} else {
+			$results = array_map( array( 'HAP_Profile_Suite_Inspector', 'inspect_module' ), $slugs );
+		}
+
+		wp_send_json_success( array( 'results' => $results ) );
 	}
 
 	public function ajax_sync_from_suite() {

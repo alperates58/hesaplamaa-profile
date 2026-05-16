@@ -41,6 +41,14 @@ class HAP_Profile_Plugin {
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-health.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-auth.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-admin.php';
+		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-suite-inspector.php';
+		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-module-runner.php';
+
+		// DB migrasyonunu versiyon değişiminde çalıştır.
+		$db_version = get_option( 'hap_profile_db_version', '0' );
+		if ( version_compare( $db_version, HAP_VERSION, '<' ) ) {
+			HAP_Profile_Activator::run_migrations();
+		}
 
 		$this->fields       = new HAP_Profile_Fields();
 		$this->modules      = new HAP_Profile_Modules();
@@ -69,6 +77,8 @@ class HAP_Profile_Plugin {
 		add_action( 'wp_ajax_hap_save_single_module', array( $this->admin, 'ajax_save_single_module' ) );
 		add_action( 'wp_ajax_hap_sync_from_suite', array( $this->admin, 'ajax_sync_from_suite' ) );
 		add_action( 'wp_ajax_hap_bulk_modules', array( $this->admin, 'ajax_bulk_modules' ) );
+		add_action( 'wp_ajax_hap_apply_runner_presets', array( $this->admin, 'ajax_apply_runner_presets' ) );
+		add_action( 'wp_ajax_hap_inspect_suite_modules', array( $this->admin, 'ajax_inspect_suite_modules' ) );
 
 		$this->render->register_shortcodes();
 		add_action( 'wp_enqueue_scripts', array( $this->render, 'enqueue_assets' ) );

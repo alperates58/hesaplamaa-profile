@@ -7,8 +7,43 @@ class HAP_Profile_Activator {
 
 	public static function activate() {
 		self::create_tables();
+		self::run_migrations();
 		self::set_default_options();
 		flush_rewrite_rules();
+	}
+
+	/**
+	 * Mevcut verileri koruyarak yeni sütunları güvenli şekilde ekler.
+	 * Her sürüm yükseltmesinde çalışır.
+	 */
+	public static function run_migrations() {
+		global $wpdb;
+		$table = $wpdb->prefix . HAP_TABLE_MODULES;
+
+		$existing_cols = array_column(
+			$wpdb->get_results( "SHOW COLUMNS FROM `{$table}`", ARRAY_A ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			'Field'
+		);
+
+		$new_columns = array(
+			'runner_type'     => "ALTER TABLE `{$table}` ADD COLUMN `runner_type` VARCHAR(40) NOT NULL DEFAULT 'none' AFTER `availability_status`",
+			'input_mapping'   => "ALTER TABLE `{$table}` ADD COLUMN `input_mapping` LONGTEXT AFTER `runner_type`",
+			'output_mapping'  => "ALTER TABLE `{$table}` ADD COLUMN `output_mapping` LONGTEXT AFTER `input_mapping`",
+			'runner_callback' => "ALTER TABLE `{$table}` ADD COLUMN `runner_callback` VARCHAR(255) NOT NULL DEFAULT '' AFTER `output_mapping`",
+			'ajax_action'     => "ALTER TABLE `{$table}` ADD COLUMN `ajax_action` VARCHAR(190) NOT NULL DEFAULT '' AFTER `runner_callback`",
+			'result_selector' => "ALTER TABLE `{$table}` ADD COLUMN `result_selector` TEXT AFTER `ajax_action`",
+			'tool_url'        => "ALTER TABLE `{$table}` ADD COLUMN `tool_url` TEXT AFTER `result_selector`",
+			'runner_status'   => "ALTER TABLE `{$table}` ADD COLUMN `runner_status` VARCHAR(80) NOT NULL DEFAULT '' AFTER `tool_url`",
+			'runner_notes'    => "ALTER TABLE `{$table}` ADD COLUMN `runner_notes` TEXT AFTER `runner_status`",
+		);
+
+		foreach ( $new_columns as $col => $sql ) {
+			if ( ! in_array( $col, $existing_cols, true ) ) {
+				$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			}
+		}
+
+		update_option( 'hap_profile_db_version', HAP_VERSION );
 	}
 
 	private static function create_tables() {

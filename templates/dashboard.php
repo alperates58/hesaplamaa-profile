@@ -22,7 +22,7 @@ $minimum_completion = $user_data->get_minimum_profile_completion( $user_id, $pro
 $minimum_missing    = $user_data->get_minimum_profile_missing_fields( $user_id, $profile );
 $field_labels       = $user_data->get_field_labels();
 
-// Only profile_core and profile_optional modules — tool_only modules excluded entirely.
+// Sadece profile_core ve profile_optional — tool_only tamamen hariç.
 $all_modules      = $modules->get_modules( array( 'availability_status' => 'active', 'limit' => 500 ) );
 $analysis_modules = array_values( array_filter(
 	$all_modules,
@@ -31,28 +31,42 @@ $analysis_modules = array_values( array_filter(
 	}
 ) );
 
-$analysis_stats      = $user_data->get_analysis_preparation_stats( $user_id, $analysis_modules, $profile );
-$module_stats        = $user_data->get_dashboard_module_stats( $analysis_modules, $profile );
+// Analiz hazırlık istatistikleri (profil tamamlama yüzdesi için).
+$analysis_stats = $user_data->get_analysis_preparation_stats( $user_id, $analysis_modules, $profile );
+
+// Module Runner — her modül için runner sonucu hesapla.
+$runner_results      = class_exists( 'HAP_Profile_Module_Runner' )
+	? HAP_Profile_Module_Runner::run_modules_for_user( $user_id, $analysis_modules, $profile )
+	: array();
+
 $grouped_items       = array();
 $missing_frequency   = array();
-$ready_result_cards  = array();
-$locked_result_cards = array();
+$ready_result_cards  = array(); // runner state: ready_result veya frontend_only
+$locked_result_cards = array(); // runner state: missing_fields
 
-foreach ( $module_stats['modules_with_state'] as $item ) {
-	$section = sanitize_key( $item['module']['section'] ?: 'overview' );
+foreach ( $runner_results as $slug => $runner_item ) {
+	$state  = $runner_item['state'];
+	$module = $runner_item['module'];
+
+	// Finans/alakasız modülleri tamamen gizle.
+	if ( 'filtered_by_profile_policy' === $state ) {
+		continue;
+	}
+
+	$section = sanitize_key( $module['section'] ?: 'overview' );
 	if ( ! isset( $grouped_items[ $section ] ) ) {
 		$grouped_items[ $section ] = array();
 	}
-	$grouped_items[ $section ][] = $item;
+	$grouped_items[ $section ][] = $runner_item;
 
-	foreach ( $item['missing_fields'] as $missing_key ) {
-		$missing_frequency[ $missing_key ] = ( $missing_frequency[ $missing_key ] ?? 0 ) + 1;
-	}
-
-	if ( in_array( $item['state'], array( 'ready', 'optional_ready' ), true ) ) {
-		$ready_result_cards[] = $item;
+	if ( 'missing_fields' === $state ) {
+		foreach ( $runner_item['missing'] as $missing_key ) {
+			$missing_frequency[ $missing_key ] = ( $missing_frequency[ $missing_key ] ?? 0 ) + 1;
+		}
+		$locked_result_cards[] = $runner_item;
 	} else {
-		$locked_result_cards[] = $item;
+		// ready_result, frontend_only, needs_backend_api, vb.
+		$ready_result_cards[] = $runner_item;
 	}
 }
 
@@ -69,19 +83,21 @@ foreach ( $section_config as $section_key => $config ) {
 	$missing_union = array();
 	$ready_count   = 0;
 	$locked_count  = 0;
-	foreach ( $items as $item ) {
-		if ( in_array( $item['state'], array( 'ready', 'optional_ready' ), true ) ) {
-			$ready_count++;
-		} else {
+	foreach ( $items as $runner_item ) {
+		// runner_item artık runner sonucu — 'state', 'missing', 'module' içeriyor.
+		$item_state = $runner_item['state'];
+		if ( 'missing_fields' === $item_state ) {
 			$locked_count++;
-		}
-		foreach ( $item['missing_fields'] as $missing_key ) {
-			$missing_union[ $missing_key ] = $field_labels[ $missing_key ] ?? $missing_key;
+			foreach ( $runner_item['missing'] as $missing_key ) {
+				$missing_union[ $missing_key ] = $field_labels[ $missing_key ] ?? $missing_key;
+			}
+		} else {
+			$ready_count++;
 		}
 	}
 
 	$missing_labels = array_values( $missing_union );
-	$is_open        = 0 === $locked_count || $ready_count > 0;
+	$is_open        = $ready_count > 0 || 0 === $locked_count;
 
 	$section_cards[] = array(
 		'key'            => $section_key,
@@ -339,30 +355,52 @@ foreach ( $user_shares as $share_item ) {
 				</div>
 
 				<div class="hap-results-grid">
-					<?php foreach ( $ready_result_cards as $item ) :
-						$module    = $item['module'];
-						$title     = ! empty( $module['title'] ) ? $module['title'] : hap_profile_humanize_slug( $module['slug'] );
-						$required  = $user_data->get_effective_required_fields( $module );
-						$req_names = array();
-						foreach ( $required as $field_key ) {
-							$req_names[] = $field_labels[ $field_key ] ?? $field_key;
-						}
+					<?php foreach ( $ready_result_cards as $runner_item ) :
+						$module     = $runner_item['module'];
+						$item_state = $runner_item['state'];
+						$title      = ! empty( $module['title'] ) ? $module['title'] : hap_profile_humanize_slug( $module['slug'] );
+						$tool_url   = $runner_item['tool_url'] ?? null;
+						$result     = $runner_item['result'] ?? null;
 					?>
-						<article class="hap-result-card is-ready">
-							<div class="hap-result-card-head">
-								<h3><?php echo esc_html( $title ); ?></h3>
-								<span class="hap-status-pill hap-ready">Hazırlanmaya hazır</span>
-							</div>
-							<p class="hap-result-card-copy">Bu analiz, mevcut profil bilgilerine göre hazır duruma geldi.</p>
-							<p class="hap-result-card-detail">Kullanılan bilgiler: <?php echo esc_html( ! empty( $req_names ) ? implode( ', ', $req_names ) : 'Temel profil bilgileri' ); ?></p>
-						</article>
+						<?php if ( 'ready_result' === $item_state && ! empty( $result ) ) : ?>
+							<article class="hap-result-card is-ready hap-result-has-value">
+								<div class="hap-result-card-head">
+									<h3><?php echo esc_html( $title ); ?></h3>
+									<span class="hap-status-pill hap-ready">Sonuç hazır</span>
+								</div>
+								<?php if ( ! empty( $result['value'] ) ) : ?>
+									<div class="hap-result-value">
+										<strong class="hap-result-value-text"><?php echo esc_html( $result['value'] ); ?></strong>
+										<?php if ( ! empty( $result['label'] ) ) : ?>
+											<span class="hap-result-value-label"><?php echo esc_html( $result['label'] ); ?></span>
+										<?php endif; ?>
+									</div>
+								<?php endif; ?>
+								<?php if ( $tool_url ) : ?>
+									<p class="hap-result-tool-link"><a href="<?php echo esc_url( $tool_url ); ?>" target="_blank" rel="noopener">Detaylı hesaplama aracı</a></p>
+								<?php endif; ?>
+							</article>
+
+						<?php else : ?>
+							<!-- frontend_only — bilgiler hazır ama Suite backend API yok -->
+							<article class="hap-result-card is-ready hap-result-pending">
+								<div class="hap-result-card-head">
+									<h3><?php echo esc_html( $title ); ?></h3>
+									<span class="hap-status-pill hap-pending">Bağlantı hazırlanıyor</span>
+								</div>
+								<p class="hap-result-card-copy">Doğum tarihin hazır. Bu sonuç Hesaplama Suite bağlantısı tamamlandığında burada gösterilecek.</p>
+								<?php if ( $tool_url ) : ?>
+									<p class="hap-result-tool-link"><a href="<?php echo esc_url( $tool_url ); ?>" target="_blank" rel="noopener">Şimdi aracı aç</a></p>
+								<?php endif; ?>
+							</article>
+						<?php endif; ?>
 					<?php endforeach; ?>
 
-					<?php foreach ( $locked_result_cards as $item ) :
-						$module         = $item['module'];
+					<?php foreach ( $locked_result_cards as $runner_item ) :
+						$module         = $runner_item['module'];
 						$title          = ! empty( $module['title'] ) ? $module['title'] : hap_profile_humanize_slug( $module['slug'] );
 						$missing_labels = array();
-						foreach ( $item['missing_fields'] as $field_key ) {
+						foreach ( $runner_item['missing'] as $field_key ) {
 							$missing_labels[] = $field_labels[ $field_key ] ?? $field_key;
 						}
 					?>
