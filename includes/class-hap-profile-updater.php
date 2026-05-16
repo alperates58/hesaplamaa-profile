@@ -354,13 +354,19 @@ class HAP_Profile_Updater {
 		// Adım 7 — Dosyaları kopyala
 		$copied = copy_dir( $package_root, $plugin_dir );
 		$this->log_update_debug( array(
-			'step'            => '7_copy',
-			'copy_dir_result' => is_wp_error( $copied ) ? $copied->get_error_code() : 'success',
+			'step'                => '7_copy',
+			'copy_dir_result'     => is_wp_error( $copied ) ? $copied->get_error_code() : 'success',
+			'copy_dir_message'    => is_wp_error( $copied ) ? $copied->get_error_message() : '',
+			'plugin_dir'          => $plugin_dir,
+			'plugin_dir_writable' => is_writable( $plugin_dir ) ? 'yes' : 'no',
 		) );
 
 		if ( is_wp_error( $copied ) && $this->should_use_native_copy_fallback( $filesystem_method, $plugin_dir ) ) {
 			$copied = $this->native_recursive_copy( $package_root, $plugin_dir );
-			$this->log_update_debug( array( 'native_copy_fallback' => is_wp_error( $copied ) ? $copied->get_error_code() : 'success' ) );
+			$this->log_update_debug( array(
+				'native_copy_fallback'         => is_wp_error( $copied ) ? $copied->get_error_code() : 'success',
+				'native_copy_fallback_message' => is_wp_error( $copied ) ? $copied->get_error_message() : '',
+			) );
 		}
 
 		$this->cleanup_directory( $extracted_dir );
@@ -656,7 +662,8 @@ class HAP_Profile_Updater {
 	}
 
 	private function should_use_native_copy_fallback( $filesystem_method, $dest ) {
-		return 'ftpsockets' === $filesystem_method && is_dir( $dest ) && is_writable( $dest );
+		unset( $filesystem_method );
+		return is_dir( $dest ) && is_writable( $dest );
 	}
 
 	private function native_recursive_copy( $source, $destination ) {
