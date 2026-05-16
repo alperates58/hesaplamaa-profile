@@ -27,15 +27,15 @@ class HAP_Profile_Admin {
 
 		$this->tabs = array(
 			'general'      => 'Genel Ayarlar',
-			'fields'       => 'Profil Alanları',
-			'onboarding'   => 'Onboarding Adımları',
-			'modules'      => 'Profil Modülleri',
-			'preset'       => 'Gelecek Modül Presetleri',
-			'ai_templates' => 'AI Yorum Şablonları',
-			'share'        => 'Paylaşım Ayarları',
-			'auth'         => 'Üyelik ve Güvenlik',
-			'updater'      => 'GitHub Güncelleme',
-			'health'       => 'Sağlık Kontrolü',
+			'fields'       => 'Profil AlanlarÄ±',
+			'onboarding'   => 'Onboarding AdÄ±mlarÄ±',
+			'modules'      => 'Profil ModÃ¼lleri',
+			'preset'       => 'Gelecek ModÃ¼l Presetleri',
+			'ai_templates' => 'AI Yorum ÅablonlarÄ±',
+			'share'        => 'PaylaÅŸÄ±m AyarlarÄ±',
+			'auth'         => 'Ãœyelik ve GÃ¼venlik',
+			'updater'      => 'GitHub GÃ¼ncelleme',
+			'health'       => 'SaÄŸlÄ±k KontrolÃ¼',
 		);
 	}
 
@@ -64,7 +64,7 @@ class HAP_Profile_Admin {
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'hap_admin_nonce' ),
 				'i18n'    => array(
-					'delete_confirm' => 'Bu modülü silmek istediğinizden emin misiniz?',
+					'delete_confirm' => 'Bu modÃ¼lÃ¼ silmek istediÄŸinizden emin misiniz?',
 				),
 			)
 		);
@@ -140,6 +140,9 @@ class HAP_Profile_Admin {
 			case 'save_general':
 				$this->save_general_settings();
 				break;
+			case 'save_updater':
+				$this->save_updater_settings();
+				break;
 			case 'save_fields':
 				$this->save_fields_settings();
 				break;
@@ -167,6 +170,17 @@ class HAP_Profile_Admin {
 		add_settings_error( 'hap_profile', 'saved', 'Genel ayarlar kaydedildi.', 'updated' );
 	}
 
+	private function save_updater_settings() {
+		$updater = new HAP_Profile_Updater();
+		$updater->save_settings(
+			array(
+				'repo'   => $_POST['hap_updater_repo'] ?? '',
+				'branch' => $_POST['hap_updater_branch'] ?? 'main',
+			)
+		);
+		add_settings_error( 'hap_profile', 'saved', 'GitHub güncelleme ayarları kaydedildi.', 'updated' );
+	}
+
 	private function save_fields_settings() {
 		$fields = array();
 		foreach ( (array) ( $_POST['hap_fields'] ?? array() ) as $field_key => $field ) {
@@ -178,7 +192,7 @@ class HAP_Profile_Admin {
 			$fields[] = $field;
 		}
 		HAP_Profile_Fields::save_fields( $fields );
-		add_settings_error( 'hap_profile', 'saved', 'Profil alanları kaydedildi.', 'updated' );
+		add_settings_error( 'hap_profile', 'saved', 'Profil alanlarÄ± kaydedildi.', 'updated' );
 	}
 
 	private function save_onboarding_settings() {
@@ -190,14 +204,14 @@ class HAP_Profile_Admin {
 			$steps[]             = $step;
 		}
 		HAP_Profile_Fields::save_steps( $steps );
-		add_settings_error( 'hap_profile', 'saved', 'Onboarding adımları kaydedildi.', 'updated' );
+		add_settings_error( 'hap_profile', 'saved', 'Onboarding adÄ±mlarÄ± kaydedildi.', 'updated' );
 	}
 
 	private function save_module_inline() {
 		$module_id = absint( $_POST['module_id'] ?? 0 );
 		$existing  = $this->modules->get_module_by_id( $module_id );
 		if ( ! $existing ) {
-			add_settings_error( 'hap_profile', 'error', 'Modül bulunamadı.', 'error' );
+			add_settings_error( 'hap_profile', 'error', 'ModÃ¼l bulunamadÄ±.', 'error' );
 			return;
 		}
 
@@ -230,21 +244,21 @@ class HAP_Profile_Admin {
 		);
 
 		$this->modules->save_module( $data, $module_id );
-		add_settings_error( 'hap_profile', 'saved', 'Modül kaydedildi.', 'updated' );
+		add_settings_error( 'hap_profile', 'saved', 'ModÃ¼l kaydedildi.', 'updated' );
 	}
 
 	public function ajax_import_modules() {
-		wp_send_json_error( array( 'message' => 'Bu sürümde toplu import kapalı.' ) );
+		wp_send_json_error( array( 'message' => 'Bu sÃ¼rÃ¼mde toplu import kapalÄ±.' ) );
 	}
 
 	public function ajax_delete_module() {
 		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
 		$id = absint( $_POST['module_id'] ?? 0 );
 		if ( ! current_user_can( 'manage_options' ) || ! $id ) {
-			wp_send_json_error( array( 'message' => 'Yetki veya ID hatası.' ) );
+			wp_send_json_error( array( 'message' => 'Yetki veya ID hatasÄ±.' ) );
 		}
 		$this->modules->delete_module( $id );
-		wp_send_json_success( array( 'message' => 'Modül silindi.' ) );
+		wp_send_json_success( array( 'message' => 'ModÃ¼l silindi.' ) );
 	}
 
 	public function ajax_save_single_module() {
@@ -254,34 +268,37 @@ class HAP_Profile_Admin {
 		}
 		$_POST['hap_action'] = 'save_module_inline';
 		$this->save_module_inline();
-		wp_send_json_success( array( 'message' => 'Modül kaydedildi.' ) );
+		wp_send_json_success( array( 'message' => 'ModÃ¼l kaydedildi.' ) );
 	}
 
 	public function ajax_sync_from_suite() {
-		wp_send_json_error( array( 'message' => 'Bu görev kapsamında Suite sync değiştirilmedi.' ) );
+		wp_send_json_error( array( 'message' => 'Bu gÃ¶rev kapsamÄ±nda Suite sync deÄŸiÅŸtirilmedi.' ) );
 	}
 
 	public function ajax_bulk_modules() {
-		wp_send_json_error( array( 'message' => 'Bu sürümde toplu işlem devre dışı.' ) );
+		wp_send_json_error( array( 'message' => 'Bu sÃ¼rÃ¼mde toplu iÅŸlem devre dÄ±ÅŸÄ±.' ) );
 	}
 
 	public function ajax_apply_runner_presets() {
-		wp_send_json_error( array( 'message' => 'Preset uygulama bu sürümde kapalı.' ) );
+		wp_send_json_error( array( 'message' => 'Preset uygulama bu sÃ¼rÃ¼mde kapalÄ±.' ) );
 	}
 
 	public function ajax_inspect_suite_modules() {
-		wp_send_json_error( array( 'message' => 'Inspector bu sürümde kapalı.' ) );
+		wp_send_json_error( array( 'message' => 'Inspector bu sÃ¼rÃ¼mde kapalÄ±.' ) );
 	}
 
 	private function render_general_tab() {
-		$settings = wp_parse_args( get_option( 'hap_profile_settings', array() ), array(
-			'system_active' => 1,
-			'profile_page_id' => 0,
-			'noindex_profiles' => 1,
-			'premium_dashboard' => 1,
-			'shareable_profile' => 1,
-			'hide_sensitive_on_share' => 1,
-		) );
+		$settings = wp_parse_args(
+			get_option( 'hap_profile_settings', array() ),
+			array(
+				'system_active'       => 1,
+				'profile_page_id'     => 0,
+				'noindex_profiles'    => 1,
+				'premium_dashboard'   => 1,
+				'shareable_profile'   => 1,
+				'hide_sensitive_on_share' => 1,
+			)
+		);
 		settings_errors( 'hap_profile' );
 		?>
 		<form method="post">
@@ -290,13 +307,13 @@ class HAP_Profile_Admin {
 			<h2>Genel Ayarlar</h2>
 			<table class="form-table">
 				<tr><th>Sistem Aktif</th><td><label><input type="checkbox" name="system_active" value="1" <?php checked( ! empty( $settings['system_active'] ) ); ?>> Aktif</label></td></tr>
-				<tr><th>Profil Sayfası</th><td><?php wp_dropdown_pages( array( 'name' => 'profile_page_id', 'selected' => absint( $settings['profile_page_id'] ), 'show_option_none' => '— Seçiniz —', 'option_none_value' => 0 ) ); ?></td></tr>
+				<tr><th>Profil SayfasÄ±</th><td><?php wp_dropdown_pages( array( 'name' => 'profile_page_id', 'selected' => absint( $settings['profile_page_id'] ), 'show_option_none' => 'â€” SeÃ§iniz â€”', 'option_none_value' => 0 ) ); ?></td></tr>
 				<tr><th>noindex</th><td><label><input type="checkbox" name="noindex_profiles" value="1" <?php checked( ! empty( $settings['noindex_profiles'] ) ); ?>> Aktif</label></td></tr>
 				<tr><th>Premium Dashboard</th><td><label><input type="checkbox" name="premium_dashboard" value="1" <?php checked( ! empty( $settings['premium_dashboard'] ) ); ?>> Aktif</label></td></tr>
-				<tr><th>Paylaşım</th><td><label><input type="checkbox" name="shareable_profile" value="1" <?php checked( ! empty( $settings['shareable_profile'] ) ); ?>> Aktif</label></td></tr>
+				<tr><th>PaylaÅŸÄ±m</th><td><label><input type="checkbox" name="shareable_profile" value="1" <?php checked( ! empty( $settings['shareable_profile'] ) ); ?>> Aktif</label></td></tr>
 				<tr><th>Hassas verileri gizle</th><td><label><input type="checkbox" name="hide_sensitive_on_share" value="1" <?php checked( ! empty( $settings['hide_sensitive_on_share'] ) ); ?>> Aktif</label></td></tr>
 			</table>
-			<?php submit_button( 'Genel ayarları kaydet' ); ?>
+			<?php submit_button( 'Genel ayarlarÄ± kaydet' ); ?>
 		</form>
 		<?php
 	}
@@ -309,19 +326,19 @@ class HAP_Profile_Admin {
 		<form method="post">
 			<?php wp_nonce_field( 'hap_admin_action', 'hap_nonce' ); ?>
 			<input type="hidden" name="hap_action" value="save_fields">
-			<h2>Profil Alanları</h2>
+			<h2>Profil AlanlarÄ±</h2>
 			<table class="widefat striped">
 				<thead>
 					<tr>
 						<th>Alan</th>
 						<th>Etiket</th>
 						<th>Tip</th>
-						<th>Adım</th>
+						<th>AdÄ±m</th>
 						<th>Aktif</th>
 						<th>Minimum profil zorunlu mu?</th>
-						<th>Hassas mı?</th>
-						<th>Bu alanla açılan modül sayısı</th>
-						<th>Düzenle</th>
+						<th>Hassas mÄ±?</th>
+						<th>Bu alanla aÃ§Ä±lan modÃ¼l sayÄ±sÄ±</th>
+						<th>DÃ¼zenle</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -342,7 +359,7 @@ class HAP_Profile_Admin {
 							<td><input type="checkbox" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][required_for_minimum_profile]" value="1" <?php checked( ! empty( $field['required_for_minimum_profile'] ) ); ?>></td>
 							<td><input type="checkbox" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][sensitive]" value="1" <?php checked( ! empty( $field['sensitive'] ) ); ?>></td>
 							<td><?php echo esc_html( count( $unlocked ) ); ?></td>
-							<td>Detay aşağıda</td>
+							<td>Detay aÅŸaÄŸÄ±da</td>
 
 							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][options]" value="<?php echo esc_attr( wp_json_encode( $field['options'] ) ); ?>">
 							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][placeholder]" value="<?php echo esc_attr( $field['placeholder'] ); ?>">
@@ -354,7 +371,7 @@ class HAP_Profile_Admin {
 						</tr>
 						<tr>
 							<td colspan="9">
-								<strong>Alan detayı:</strong>
+								<strong>Alan detayÄ±:</strong>
 								<div>field_key: <code><?php echo esc_html( $field['field_key'] ); ?></code></div>
 								<div>help_text: <input type="text" class="regular-text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][help_text]" value="<?php echo esc_attr( $field['help_text'] ); ?>"></div>
 								<div>placeholder: <input type="text" class="regular-text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][placeholder]" value="<?php echo esc_attr( $field['placeholder'] ); ?>"></div>
@@ -376,7 +393,7 @@ class HAP_Profile_Admin {
 					<?php endforeach; ?>
 				</tbody>
 			</table>
-			<?php submit_button( 'Alanları Kaydet' ); ?>
+			<?php submit_button( 'AlanlarÄ± Kaydet' ); ?>
 		</form>
 		<?php
 	}
@@ -388,7 +405,7 @@ class HAP_Profile_Admin {
 		<form method="post">
 			<?php wp_nonce_field( 'hap_admin_action', 'hap_nonce' ); ?>
 			<input type="hidden" name="hap_action" value="save_onboarding">
-			<h2>Onboarding Adımları</h2>
+			<h2>Onboarding AdÄ±mlarÄ±</h2>
 			<table class="widefat striped">
 				<thead><tr><th>step_key</th><th>title</th><th>description</th><th>icon</th><th>sort_order</th><th>is_required</th><th>active</th><th>completion_rule</th></tr></thead>
 				<tbody>
@@ -406,23 +423,23 @@ class HAP_Profile_Admin {
 				<?php endforeach; ?>
 				</tbody>
 			</table>
-			<?php submit_button( 'Onboarding Adımlarını Kaydet' ); ?>
+			<?php submit_button( 'Onboarding AdÄ±mlarÄ±nÄ± Kaydet' ); ?>
 		</form>
 		<?php
 	}
 
 	private function render_modules_tab() {
-		$modules = $this->modules->get_modules( array( 'limit' => 500 ) );
-		$fields  = HAP_Profile_Fields::get_active_fields();
+		$modules       = $this->modules->get_modules( array( 'limit' => 500 ) );
+		$fields        = HAP_Profile_Fields::get_active_fields();
 		$field_options = array();
 		foreach ( $fields as $field ) {
 			$field_options[ $field['field_key'] ] = $field['label'];
 		}
 		settings_errors( 'hap_profile' );
 		?>
-		<h2>Profil Modülleri</h2>
+		<h2>Profil ModÃ¼lleri</h2>
 		<table class="widefat striped">
-			<thead><tr><th>ID</th><th>Başlık</th><th>Slug</th><th>Durum</th><th>required_fields</th><th>optional_fields</th><th>result_enabled</th><th>onboarding_prompt_enabled</th><th>ai_include</th><th>share_include_default</th></tr></thead>
+			<thead><tr><th>ID</th><th>BaÅŸlÄ±k</th><th>Slug</th><th>Durum</th><th>required_fields</th><th>optional_fields</th><th>result_enabled</th><th>onboarding_prompt_enabled</th><th>ai_include</th><th>share_include_default</th></tr></thead>
 			<tbody>
 			<?php foreach ( $modules as $mod ) : ?>
 				<tr>
@@ -474,27 +491,234 @@ class HAP_Profile_Admin {
 	}
 
 	private function render_preset_tab() {
-		echo '<p>Preset modül ekranı bu görevde değiştirilmedi.</p>';
+		echo '<p>Preset modÃ¼l ekranÄ± bu gÃ¶revde deÄŸiÅŸtirilmedi.</p>';
 	}
 
 	private function render_ai_templates_tab() {
-		echo '<p>AI şablon ekranı bu görevde değiştirilmedi.</p>';
+		echo '<p>AI ÅŸablon ekranÄ± bu gÃ¶revde deÄŸiÅŸtirilmedi.</p>';
 	}
 
 	private function render_share_tab() {
-		echo '<p>Paylaşım ayarları ekranı bu görevde değiştirilmedi.</p>';
+		echo '<p>PaylaÅŸÄ±m ayarlarÄ± ekranÄ± bu gÃ¶revde deÄŸiÅŸtirilmedi.</p>';
 	}
 
 	private function render_auth_tab() {
-		echo '<p>Üyelik ve güvenlik ekranı bu görevde değiştirilmedi.</p>';
+		echo '<p>Ãœyelik ve gÃ¼venlik ekranÄ± bu gÃ¶revde deÄŸiÅŸtirilmedi.</p>';
 	}
 
 	private function render_updater_tab() {
-		echo '<p>Updater ekranı bu görevde değiştirilmedi.</p>';
+		$updater     = new HAP_Profile_Updater();
+		$settings    = $updater->get_settings();
+		$notice      = $updater->get_update_notice( true );
+		$last_sha    = (string) get_option( 'hap_profile_last_update_sha', '' );
+		$last_update = (string) get_option( 'hap_profile_last_update', '' );
+		$last_backup = (string) get_option( 'hap_profile_last_backup_path', '' );
+		$last_error  = $updater->get_last_update_error();
+		$debug       = $updater->get_last_update_debug();
+		settings_errors( 'hap_profile' );
+		?>
+		<h2>GitHub'dan Güncelle</h2>
+
+		<?php if ( $notice ) : ?>
+		<div class="notice notice-<?php echo 'success' === $notice['type'] ? 'success' : 'error'; ?> is-dismissible">
+			<p>
+				<?php if ( 'success' === $notice['type'] ) : ?>&#x2705;<?php else : ?>&#x274C;<?php endif; ?>
+				<strong><?php echo esc_html( $notice['message'] ); ?></strong>
+				<span style="color:#888;font-size:.85em;margin-left:8px"><?php echo esc_html( $notice['time'] ); ?></span>
+			</p>
+		</div>
+		<?php endif; ?>
+
+		<div class="hap-updater-status-box" style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;padding:16px 20px;margin-bottom:20px;max-width:760px">
+			<table style="width:100%;border-collapse:collapse">
+				<tr>
+					<td style="width:200px;padding:5px 0;color:#555;font-weight:600">Repo</td>
+					<td>
+						<?php if ( ! empty( $settings['repo'] ) ) : ?>
+						<a href="https://github.com/<?php echo esc_attr( $settings['repo'] ); ?>" target="_blank">
+							<?php echo esc_html( $settings['repo'] ); ?>
+						</a>
+						<?php else : ?>
+						<span style="color:#aaa">Yapılandırılmamış</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Branch</td>
+					<td><code><?php echo esc_html( ! empty( $settings['branch'] ) ? $settings['branch'] : 'main' ); ?></code></td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Mevcut Eklenti Sürümü</td>
+					<td><code><?php echo esc_html( HAP_Profile_Updater::get_version_string() ); ?></code></td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Son GitHub SHA</td>
+					<td>
+						<?php if ( $last_sha ) : ?>
+						<code><?php echo esc_html( substr( $last_sha, 0, 7 ) ); ?></code>
+						<?php if ( ! empty( $settings['repo'] ) ) : ?>
+						<a href="https://github.com/<?php echo esc_attr( $settings['repo'] ); ?>/commit/<?php echo esc_attr( $last_sha ); ?>" target="_blank" style="margin-left:8px;font-size:.82rem">GitHub'da Gör &#x2197;</a>
+						<?php endif; ?>
+						<?php else : ?>
+						<span style="color:#aaa">&#x2014;</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Son Güncelleme Zamanı</td>
+					<td><?php echo $last_update ? esc_html( $last_update ) : '<span style="color:#aaa">&#x2014;</span>'; ?></td>
+				</tr>
+				<tr>
+					<td style="padding:5px 0;color:#555;font-weight:600">Son Backup Yolu</td>
+					<td>
+						<?php if ( $last_backup ) : ?>
+						<code style="font-size:.82rem;word-break:break-all"><?php echo esc_html( $last_backup ); ?></code>
+						<?php if ( is_dir( $last_backup ) ) : ?>
+						<span style="color:green;margin-left:6px">&#x2714; Mevcut</span>
+						<?php else : ?>
+						<span style="color:#c00;margin-left:6px">&#x26A0; Klasör bulunamadı</span>
+						<?php endif; ?>
+						<?php else : ?>
+						<span style="color:#aaa">&#x2014;</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+				<?php if ( $last_error ) : ?>
+				<tr>
+					<td style="padding:5px 0;color:#c00;font-weight:600">Son Hata</td>
+					<td style="color:#c00"><?php echo esc_html( $last_error ); ?></td>
+				</tr>
+				<?php endif; ?>
+			</table>
+		</div>
+
+		<?php if ( ! empty( $settings['repo'] ) ) : ?>
+		<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="hap-update-form">
+				<?php wp_nonce_field( 'hap_update_from_github', '_wpnonce' ); ?>
+				<input type="hidden" name="action" value="hap_update_from_github">
+				<button type="submit" class="button button-primary button-hero" id="hap-do-update"
+				        onclick="return confirm('GitHub\'tan en son surum indirilip mevcut dosyalarin uzerine yazilacak ve oncesinde otomatik backup alinacak. Devam edilsin mi?')">
+					GitHub'dan Simdi Guncelle
+				</button>
+			</form>
+			<button type="button" class="button button-secondary" id="hap-check-version">
+				Son Commit'i Kontrol Et
+			</button>
+			<span id="hap-version-result" style="font-size:.88rem;color:#555"></span>
+		</div>
+		<?php else : ?>
+		<div class="notice notice-warning inline"><p>Güncelleme butonu için önce aşağıdan repo ayarlarını kaydedin.</p></div>
+		<?php endif; ?>
+
+		<?php if ( $last_backup && is_dir( $last_backup ) ) : ?>
+		<div style="margin-bottom:24px">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="hap-rollback-form">
+				<?php wp_nonce_field( 'hap_rollback_from_backup', '_wpnonce' ); ?>
+				<input type="hidden" name="action" value="hap_rollback_from_backup">
+				<button type="submit" class="button button-secondary"
+				        onclick="return confirm('Son backup\'tan geri yukleme yapilacak: <?php echo esc_js( basename( $last_backup ) ); ?>. Mevcut surumun uzerine yazilacak. Devam?')">
+					Son Backup'tan Geri Don
+				</button>
+				<span style="margin-left:8px;font-size:.82rem;color:#888"><?php echo esc_html( basename( $last_backup ) ); ?></span>
+			</form>
+		</div>
+		<?php elseif ( $last_backup ) : ?>
+		<div class="notice notice-warning inline" style="margin-bottom:16px">
+			<p>Son kaydedilen backup yolu artık mevcut değil, geri dönüş yapılamaz.</p>
+		</div>
+		<?php endif; ?>
+
+		<form method="post">
+			<?php wp_nonce_field( 'hap_admin_action', 'hap_nonce' ); ?>
+			<input type="hidden" name="hap_action" value="save_updater">
+			<h3>Güncelleme Ayarları</h3>
+			<p class="description" style="margin-bottom:12px">
+				Sadece public GitHub repoları desteklenir. Token/private repo desteği yoktur.
+			</p>
+			<table class="form-table" style="max-width:700px">
+				<tr>
+					<th>GitHub Repo <span style="color:red">*</span></th>
+					<td>
+						<input type="text" name="hap_updater_repo"
+						       value="<?php echo esc_attr( $settings['repo'] ); ?>"
+						       class="regular-text" placeholder="kullanici/hesaplamaa-profile">
+						<p class="description">
+							Yalnızca <code>kullanici_adi/repo_adi</code> formatı kabul edilir.<br>
+							Örn: <code>alperates58/hesaplamaa-profile</code> - URL, token veya query param girilmesin.
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th>Branch</th>
+					<td>
+						<input type="text" name="hap_updater_branch"
+						       value="<?php echo esc_attr( ! empty( $settings['branch'] ) ? $settings['branch'] : 'main' ); ?>"
+						       class="small-text" placeholder="main">
+						<p class="description">
+							Yalnızca harf, sayı, <code>-</code>, <code>_</code> ve <code>.</code> içerebilir.<br>
+							Genellikle <code>main</code> veya <code>master</code>.
+						</p>
+					</td>
+				</tr>
+			</table>
+			<?php submit_button( 'Ayarları Kaydet' ); ?>
+		</form>
+
+		<?php if ( ! empty( $debug ) ) : ?>
+		<div style="margin-top:16px">
+			<h3>Son Debug Bilgileri <small style="font-weight:400;color:#888">(son güncelleme/rollback)</small></h3>
+			<table class="widefat striped" style="max-width:800px">
+				<thead><tr><th style="width:200px">Anahtar</th><th>Değer</th></tr></thead>
+				<tbody>
+				<?php foreach ( $debug as $key => $value ) : ?>
+				<tr>
+					<td><code><?php echo esc_html( $key ); ?></code></td>
+					<td style="word-break:break-all"><?php echo esc_html( $value ); ?></td>
+				</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+		<?php endif; ?>
+
+		<script>
+		jQuery(function($){
+			$('#hap-check-version').on('click', function(){
+				var $btn = $(this);
+				var $res = $('#hap-version-result');
+				$btn.prop('disabled', true).text('Kontrol ediliyor...');
+				$res.text('');
+				$.post(hapAdmin.ajaxUrl, {
+					action: 'hap_check_github_version',
+					nonce: hapAdmin.nonce
+				}, function(res){
+					$btn.prop('disabled', false).text("Son Commit'i Kontrol Et");
+					if(res.success){
+						$res.html('GitHub son commit: <strong>' + res.data.sha + '</strong>');
+					} else {
+						$res.html('Hata: ' + (res.data || 'Bilinmeyen hata.'));
+					}
+				}).fail(function(){
+					$btn.prop('disabled', false).text("Son Commit'i Kontrol Et");
+					$res.text('Baglanti hatasi.');
+				});
+			});
+
+			$('#hap-do-update').closest('form').on('submit', function(){
+				$('#hap-do-update').prop('disabled', true).text('Guncelleniyor... (lutfen bekleyin)');
+			});
+
+			$('#hap-rollback-form').on('submit', function(){
+				$(this).find('button[type=submit]').prop('disabled', true).text('Geri yukleniyor...');
+			});
+		});
+		</script>
+		<?php
 	}
 
 	private function render_health_tab() {
-		echo '<h2>Sağlık Kontrolü</h2>';
+		echo '<h2>SaÄŸlÄ±k KontrolÃ¼</h2>';
 		$this->health->render();
 	}
 }
