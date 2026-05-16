@@ -65,12 +65,14 @@ class HAP_Profile_Plugin {
 		add_action( 'wp_ajax_hap_delete_module', array( $this->admin, 'ajax_delete_module' ) );
 		add_action( 'wp_ajax_hap_save_single_module', array( $this->admin, 'ajax_save_single_module' ) );
 		add_action( 'wp_ajax_hap_sync_from_suite', array( $this->admin, 'ajax_sync_from_suite' ) );
+		add_action( 'wp_ajax_hap_bulk_modules', array( $this->admin, 'ajax_bulk_modules' ) );
 
 		$this->render->register_shortcodes();
 		add_action( 'wp_enqueue_scripts', array( $this->render, 'enqueue_assets' ) );
 		add_filter( 'wp_robots', array( $this->render, 'add_noindex' ) );
 
 		add_action( 'wp_ajax_hap_save_profile', array( $this->render, 'handle_save_profile' ) );
+		add_action( 'admin_post_hap_save_profile', array( $this->render, 'handle_save_profile_post' ) );
 		add_action( 'wp_ajax_hap_create_share', array( $this->render, 'handle_create_share' ) );
 		add_action( 'wp_ajax_hap_revoke_share', array( $this->render, 'handle_revoke_share' ) );
 	}

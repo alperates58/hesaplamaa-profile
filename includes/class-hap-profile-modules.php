@@ -183,21 +183,41 @@ class HAP_Profile_Modules {
 			return new WP_Error( 'invalid_json', 'Geçersiz JSON formatı.' );
 		}
 
-		$imported = 0;
+		$inserted = 0;
+		$updated  = 0;
 		$skipped  = 0;
 		$errors   = array();
 
 		$section_map = array(
+			// İngilizce
 			'astrology'          => 'astrology',
 			'health'             => 'health_lifestyle',
+			'health_lifestyle'   => 'health_lifestyle',
 			'sport'              => 'sport_activity',
+			'sport_activity'     => 'sport_activity',
 			'numerology'         => 'numerology',
 			'chinese'            => 'chinese_astrology',
+			'chinese_astrology'  => 'chinese_astrology',
 			'symbolic'           => 'symbolic',
 			'tarot'              => 'tarot',
 			'moon'               => 'moon_sky',
+			'moon_sky'           => 'moon_sky',
 			'houses'             => 'astrology_houses',
+			'astrology_houses'   => 'astrology_houses',
+			'overview'           => 'overview',
+			// Türkçe yaklaşım
+			'astroloji'          => 'astrology',
+			'saglik_spor'        => 'health_lifestyle',
+			'numeroloji_sembolik'=> 'numerology',
+			'diger'              => 'overview',
+			'spor'               => 'sport_activity',
+			'numeroloji'         => 'numerology',
+			'sembolik'           => 'symbolic',
+			'cin_astrolojisi'    => 'chinese_astrology',
+			'ay_gokyuzu'         => 'moon_sky',
 		);
+
+		$valid_sections = array_values( array_unique( $section_map ) );
 
 		foreach ( $json_data as $item ) {
 			if ( empty( $item['slug'] ) ) {
@@ -205,36 +225,58 @@ class HAP_Profile_Modules {
 				continue;
 			}
 
-			$section = sanitize_key( $item['section'] ?? '' );
+			$slug        = sanitize_key( $item['slug'] );
+			$raw_section = sanitize_key( $item['section'] ?? '' );
+			$section     = $section_map[ $raw_section ] ?? ( in_array( $raw_section, $valid_sections, true ) ? $raw_section : 'overview' );
+			$existing    = $this->get_module_by_slug( $slug );
+
+			// Shortcode uyumsuzluğu notu
+			$given_sc    = sanitize_text_field( $item['shortcode'] ?? '' );
+			$expected_sc = '[hc_' . str_replace( '-', '_', $slug ) . ']';
+			$sc_note     = ( $given_sc && $given_sc !== $expected_sc )
+				? '[import] shortcode_mismatch: given=' . $given_sc . '; '
+				: '';
 
 			$module_data = array(
-				'slug'                    => sanitize_key( $item['slug'] ),
+				'slug'                    => $slug,
 				'title'                   => sanitize_text_field( $item['title'] ?? '' ),
-				'shortcode'               => sanitize_text_field( $item['shortcode'] ?? '' ),
+				'shortcode'               => $given_sc,
 				'section'                 => $section,
-				'profile_status'          => 'disabled',
-				'required_fields'         => array(),
-				'missing_fields_behavior' => 'show_prompt',
-				'ai_enabled'              => 0,
-				'sort_order'              => 0,
-				'notes'                   => '',
+				// Mevcut modülde profile_status/required_fields korunur, yoksa varsayılan
+				'profile_status'          => $existing ? $existing['profile_status'] : 'tool_only',
+				'required_fields'         => $existing ? json_decode( $existing['required_fields'], true ) ?: array() : array(),
+				'missing_fields_behavior' => $existing ? $existing['missing_fields_behavior'] : 'show_prompt',
+				'ai_enabled'              => $existing ? (int) $existing['ai_enabled'] : 0,
+				'sort_order'              => $existing ? (int) $existing['sort_order'] : 0,
+				'notes'                   => $sc_note . sanitize_textarea_field( $item['notes'] ?? ( $existing ? $existing['notes'] : '' ) ),
 				'source'                  => 'json_import',
-				'availability_status'     => 'active',
+				'availability_status'     => sanitize_key( $item['availability_status'] ?? ( $existing ? $existing['availability_status'] : 'active' ) ),
 			);
 
-			$result = $this->save_module( $module_data );
+			$result = $this->save_module( $module_data, $existing ? (int) $existing['id'] : null );
 			if ( $result ) {
-				$imported++;
+				if ( $existing ) {
+					$updated++;
+				} else {
+					$inserted++;
+				}
 			} else {
-				$errors[] = $item['slug'];
+				$errors[] = $slug;
 			}
 		}
 
-		return array(
-			'imported' => $imported,
+		$total  = $inserted + $updated + $skipped;
+		$report = array(
+			'inserted' => $inserted,
+			'updated'  => $updated,
 			'skipped'  => $skipped,
+			'total'    => $total,
 			'errors'   => $errors,
+			'time'     => current_time( 'mysql' ),
 		);
+		update_option( 'hap_profile_last_import_report', $report, false );
+
+		return $report;
 	}
 
 	public function get_sections_summary() {

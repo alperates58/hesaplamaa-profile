@@ -324,9 +324,17 @@ class HAP_Profile_Admin {
 		}
 
 		wp_send_json_success( array(
-			'message'  => sprintf( '%d modül içe aktarıldı, %d atlandı.', $result['imported'], $result['skipped'] ),
-			'imported' => $result['imported'],
+			'message'  => sprintf(
+				'Toplam %d: %d eklendi, %d güncellendi, %d atlandı.',
+				$result['total'],
+				$result['inserted'],
+				$result['updated'],
+				$result['skipped']
+			),
+			'inserted' => $result['inserted'],
+			'updated'  => $result['updated'],
 			'skipped'  => $result['skipped'],
+			'total'    => $result['total'],
 		) );
 	}
 
@@ -392,8 +400,79 @@ class HAP_Profile_Admin {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 		wp_send_json_success( array(
-			'message'  => sprintf( 'Suite\'ten %d modül içe aktarıldı.', $result['imported'] ),
-			'imported' => $result['imported'],
+			'message'  => sprintf(
+				'Suite\'ten toplam %d: %d eklendi, %d güncellendi.',
+				$result['total'], $result['inserted'], $result['updated']
+			),
+			'inserted' => $result['inserted'],
+			'updated'  => $result['updated'],
+		) );
+	}
+
+	public function ajax_bulk_modules() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		$ids    = array_map( 'absint', (array) ( $_POST['module_ids'] ?? array() ) );
+		$action = sanitize_key( $_POST['bulk_action'] ?? '' );
+
+		if ( empty( $ids ) ) {
+			wp_send_json_error( array( 'message' => 'Modül seçilmedi.' ) );
+		}
+
+		$valid_status_actions = array(
+			'set_disabled'         => 'disabled',
+			'set_tool_only'        => 'tool_only',
+			'set_profile_optional' => 'profile_optional',
+			'set_profile_core'     => 'profile_core',
+		);
+
+		$valid_avail_actions = array(
+			'set_avail_active'  => 'active',
+			'set_avail_planned' => 'planned',
+		);
+
+		$valid_section_actions = array(
+			'set_section_overview'         => 'overview',
+			'set_section_health'           => 'health_lifestyle',
+			'set_section_sport'            => 'sport_activity',
+			'set_section_astrology'        => 'astrology',
+			'set_section_astrology_houses' => 'astrology_houses',
+			'set_section_moon_sky'         => 'moon_sky',
+			'set_section_numerology'       => 'numerology',
+			'set_section_chinese'          => 'chinese_astrology',
+			'set_section_symbolic'         => 'symbolic',
+			'set_section_tarot'            => 'tarot',
+		);
+
+		$updated = 0;
+		foreach ( $ids as $id ) {
+			$existing = $this->modules->get_module_by_id( $id );
+			if ( ! $existing ) {
+				continue;
+			}
+
+			$update = $existing;
+
+			if ( isset( $valid_status_actions[ $action ] ) ) {
+				$update['profile_status'] = $valid_status_actions[ $action ];
+			} elseif ( isset( $valid_avail_actions[ $action ] ) ) {
+				$update['availability_status'] = $valid_avail_actions[ $action ];
+			} elseif ( isset( $valid_section_actions[ $action ] ) ) {
+				$update['section'] = $valid_section_actions[ $action ];
+			} else {
+				wp_send_json_error( array( 'message' => 'Geçersiz toplu işlem: ' . esc_html( $action ) ) );
+			}
+
+			$this->modules->save_module( $update, $id );
+			$updated++;
+		}
+
+		wp_send_json_success( array(
+			'message' => $updated . ' modül güncellendi.',
+			'updated' => $updated,
 		) );
 	}
 
@@ -630,9 +709,36 @@ class HAP_Profile_Admin {
 		<?php if ( empty( $modules ) ) : ?>
 			<div class="notice notice-warning inline"><p>Henüz modül yok. JSON dosyası ile içe aktarın.</p></div>
 		<?php else : ?>
+
+		<!-- TOPLU İŞLEM ÇUBUĞU -->
+		<div class="hap-bulk-bar" style="display:flex;align-items:center;gap:8px;margin:12px 0;padding:8px 12px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px">
+			<label style="font-weight:600;font-size:.85rem">Toplu İşlem:</label>
+			<select id="hap-bulk-action" style="max-width:220px">
+				<option value="">— Seçiniz —</option>
+				<optgroup label="Profil Durumu">
+					<option value="set_disabled">Disabled yap</option>
+					<option value="set_tool_only">Tool Only yap</option>
+					<option value="set_profile_optional">Profile Optional yap</option>
+					<option value="set_profile_core">Profile Core yap</option>
+				</optgroup>
+				<optgroup label="Erişilebilirlik">
+					<option value="set_avail_active">Active yap</option>
+					<option value="set_avail_planned">Planned yap</option>
+				</optgroup>
+				<optgroup label="Bölüm Ata">
+					<?php foreach ( $sections as $sk => $sv ) : ?>
+					<option value="set_section_<?php echo esc_attr( $sk ); ?>"><?php echo esc_html( $sv ); ?></option>
+					<?php endforeach; ?>
+				</optgroup>
+			</select>
+			<button id="hap-bulk-apply" class="button button-secondary">Uygula</button>
+			<span id="hap-bulk-result" style="font-size:.85rem;margin-left:8px"></span>
+		</div>
+
 		<table class="widefat hap-modules-table">
 			<thead>
 				<tr>
+					<th style="width:30px"><input type="checkbox" id="hap-select-all-modules" title="Tümünü seç"></th>
 					<th>ID</th>
 					<th>Başlık</th>
 					<th>Slug</th>
@@ -650,6 +756,7 @@ class HAP_Profile_Admin {
 					$req = $this->modules->decode_required_fields( $mod['required_fields'] );
 				?>
 				<tr data-id="<?php echo absint( $mod['id'] ); ?>">
+					<td><input type="checkbox" class="hap-module-cb" value="<?php echo absint( $mod['id'] ); ?>"></td>
 					<td><?php echo absint( $mod['id'] ); ?></td>
 					<td>
 						<strong><?php echo esc_html( $mod['title'] ); ?></strong>
@@ -849,6 +956,27 @@ class HAP_Profile_Admin {
 			</table>
 			<?php submit_button( 'Preset Modül Ekle', 'primary', 'submit_preset' ); ?>
 		</form>
+		<script>
+		(function(){
+			var titleEl = document.querySelector( 'input[name="preset_title"]' );
+			var slugEl  = document.querySelector( 'input[name="preset_slug"]' );
+			var scEl    = document.querySelector( 'input[name="preset_shortcode"]' );
+			if ( ! titleEl || ! slugEl ) return;
+			var trMap = { 'ğ':'g','ü':'u','ş':'s','ı':'i','ö':'o','ç':'c',
+			              'Ğ':'g','Ü':'u','Ş':'s','İ':'i','Ö':'o','Ç':'c' };
+			function toSlug( s ) {
+				s = s.replace( /[ğüşıöçĞÜŞİÖÇ]/g, function( c ) { return trMap[c] || c; } );
+				return s.toLowerCase().replace( /[^a-z0-9]+/g, '-' ).replace( /^-+|-+$/g, '' );
+			}
+			titleEl.addEventListener( 'input', function() {
+				var slug = toSlug( this.value );
+				slugEl.value = slug;
+				if ( scEl ) {
+					scEl.value = '[hc_' + slug.replace( /-/g, '_' ) + ']';
+				}
+			} );
+		})();
+		</script>
 		</div>
 		</div>
 		<?php

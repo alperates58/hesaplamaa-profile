@@ -256,7 +256,6 @@ class HAP_Profile_Render {
 
 		$user_id = get_current_user_id();
 		$data    = isset( $_POST['profile_data'] ) ? (array) $_POST['profile_data'] : array();
-		$data    = array_map( 'sanitize_text_field', $data );
 
 		$this->user_data->save_user_data( $user_id, $data );
 
@@ -264,6 +263,27 @@ class HAP_Profile_Render {
 			'message'    => 'Profiliniz kaydedildi.',
 			'completion' => $this->user_data->get_completion_percentage( $user_id ),
 		) );
+	}
+
+	public function handle_save_profile_post() {
+		if ( ! is_user_logged_in() ) {
+			wp_redirect( wp_login_url( wp_get_referer() ?: home_url() ) );
+			exit;
+		}
+
+		$nonce = isset( $_POST['hap_pf_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['hap_pf_nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'hap_save_profile_form' ) ) {
+			wp_redirect( add_query_arg( 'hap_error', 'nonce', wp_get_referer() ?: home_url() ) );
+			exit;
+		}
+
+		$user_id = get_current_user_id();
+		$data    = isset( $_POST['profile_data'] ) ? (array) $_POST['profile_data'] : array();
+
+		$this->user_data->save_user_data( $user_id, $data );
+
+		wp_redirect( add_query_arg( 'hap_saved', '1', wp_get_referer() ?: home_url() ) );
+		exit;
 	}
 
 	public function handle_create_share() {
@@ -321,16 +341,39 @@ class HAP_Profile_Render {
 		}
 
 		global $post;
-		if ( ! $post ) {
+		if ( ! $post || ! is_a( $post, 'WP_Post' ) ) {
 			return $robots;
 		}
 
-		$profile_page_id = absint( $settings['profile_page_id'] ?? 0 );
+		$profile_page_id  = absint( $settings['profile_page_id'] ?? 0 );
+		$register_page_id = absint( $settings['profile_register_page_id'] ?? 0 );
+		$login_page_id    = absint( $settings['profile_login_page_id'] ?? 0 );
+		$share_settings   = get_option( 'hap_profile_share_settings', array() );
+		$share_page_id    = absint( $share_settings['share_page_id'] ?? 0 );
+
 		$is_share        = isset( $_GET['share'] ) || isset( $_GET['hap_share'] );
 		$is_profile_page = $profile_page_id && is_page( $profile_page_id );
-		$has_shortcode   = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'hap_user_profile_dashboard' );
+		$is_register     = $register_page_id && is_page( $register_page_id );
+		$is_login        = $login_page_id && is_page( $login_page_id );
+		$is_share_page   = $share_page_id && is_page( $share_page_id );
 
-		if ( $is_profile_page || $has_shortcode || $is_share ) {
+		$hap_shortcodes = array(
+			'hap_user_profile_dashboard',
+			'hap_profile_form',
+			'hap_profile_register',
+			'hap_profile_login',
+			'hap_public_profile',
+			'hap_profile_share_button',
+		);
+		$has_shortcode = false;
+		foreach ( $hap_shortcodes as $sc ) {
+			if ( has_shortcode( $post->post_content, $sc ) ) {
+				$has_shortcode = true;
+				break;
+			}
+		}
+
+		if ( $is_profile_page || $is_register || $is_login || $is_share_page || $has_shortcode || $is_share ) {
 			$robots['noindex']  = true;
 			$robots['nofollow'] = true;
 		}
