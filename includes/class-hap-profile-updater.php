@@ -331,6 +331,10 @@ class HAP_Profile_Updater {
 			);
 		}
 
+		if ( ! is_writable( $plugin_dir ) ) {
+			@chmod( $plugin_dir, 0755 );
+		}
+
 		$copied = copy_dir( $package_root, $plugin_dir );
 		$this->log_update_debug(
 			array(
@@ -612,7 +616,13 @@ class HAP_Profile_Updater {
 
 	private function should_use_native_copy_fallback( $filesystem_method, $dest ) {
 		unset( $filesystem_method );
-		return is_dir( $dest ) && is_writable( $dest );
+		if ( ! is_dir( $dest ) ) {
+			return false;
+		}
+		if ( ! is_writable( $dest ) ) {
+			@chmod( $dest, 0755 );
+		}
+		return is_writable( $dest );
 	}
 
 	private function native_recursive_copy( $source, $destination ) {
@@ -620,7 +630,13 @@ class HAP_Profile_Updater {
 			return new WP_Error( 'native_copy_source_missing', 'Kopyalama kaynağı bulunamadı: ' . $source );
 		}
 
-		if ( ! is_dir( $destination ) || ! is_writable( $destination ) ) {
+		if ( ! is_dir( $destination ) ) {
+			return new WP_Error( 'native_copy_destination_unwritable', 'Hedef klasör yazılabilir değil: ' . $destination );
+		}
+		if ( ! is_writable( $destination ) ) {
+			@chmod( $destination, 0755 );
+		}
+		if ( ! is_writable( $destination ) ) {
 			return new WP_Error( 'native_copy_destination_unwritable', 'Hedef klasör yazılabilir değil: ' . $destination );
 		}
 
