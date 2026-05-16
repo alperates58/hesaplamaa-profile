@@ -96,8 +96,8 @@ class HAP_Profile_Health {
 		$updater     = new HAP_Profile_Updater();
 		$upd_s       = $updater->get_settings();
 		$upd_repo    = ! empty( $upd_s['repo'] );
-		$last_update = get_option( 'hap_last_update', '' );
-		$last_sha    = substr( (string) get_option( 'hap_last_update_sha', '' ), 0, 7 );
+		$last_update = get_option( 'hap_profile_last_update', '' );
+		$last_sha    = substr( (string) get_option( 'hap_profile_last_update_sha', '' ), 0, 7 );
 		$upd_label   = $upd_repo
 			? ( $last_sha ? 'Yapılandırıldı — Son: ' . $last_sha . ( $last_update ? ' (' . $last_update . ')' : '' ) : 'Yapılandırıldı — Henüz güncelleme yapılmadı' )
 			: 'Repo ayarlanmamış';

@@ -175,6 +175,10 @@ class HAP_Profile_Render {
 	}
 
 	public function enqueue_assets() {
+		if ( ! $this->should_load_assets() ) {
+			return;
+		}
+
 		wp_enqueue_style(
 			'hap-profile',
 			HAP_PLUGIN_URL . 'assets/profile.css',
@@ -198,6 +202,49 @@ class HAP_Profile_Render {
 				'confirm'  => __( 'Emin misiniz?', 'hesaplamaa-profile' ),
 			),
 		) );
+	}
+
+	private function should_load_assets() {
+		global $post;
+
+		// Paylaşım token'ı varsa her zaman yükle
+		if ( isset( $_GET['hap_share'] ) || isset( $_GET['share'] ) ) {
+			return true;
+		}
+
+		if ( ! $post || ! is_a( $post, 'WP_Post' ) ) {
+			return false;
+		}
+
+		// Ayarlarda tanımlı profil ve paylaşım sayfaları
+		$settings        = get_option( 'hap_profile_settings', array() );
+		$share_settings  = get_option( 'hap_profile_share_settings', array() );
+		$profile_page_id = absint( $settings['profile_page_id'] ?? 0 );
+		$share_page_id   = absint( $share_settings['share_page_id'] ?? 0 );
+
+		if ( $profile_page_id && is_page( $profile_page_id ) ) {
+			return true;
+		}
+		if ( $share_page_id && is_page( $share_page_id ) ) {
+			return true;
+		}
+
+		// Sayfada herhangi bir HAP shortcode var mı?
+		$hap_shortcodes = array(
+			'hap_user_profile_dashboard',
+			'hap_profile_form',
+			'hap_profile_share_button',
+			'hap_public_profile',
+			'hap_profile_register',
+			'hap_profile_login',
+		);
+		foreach ( $hap_shortcodes as $sc ) {
+			if ( has_shortcode( $post->post_content, $sc ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public function handle_save_profile() {

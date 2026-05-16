@@ -6,9 +6,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class HAP_Profile_Updater {
 
 	private $option_key           = 'hap_profile_updater_settings';
-	private $notice_transient_key = 'hap_github_update_notice';
-	private $debug_option_key     = 'hap_github_update_last_debug';
-	private $error_option_key     = 'hap_github_update_last_error';
+	private $notice_transient_key = 'hap_profile_update_notice';
+	private $debug_option_key     = 'hap_profile_update_last_debug';
+	private $error_option_key     = 'hap_profile_update_last_error';
 	private $last_zip_http_code   = 0;
 
 	public function __construct() {
@@ -254,11 +254,11 @@ class HAP_Profile_Updater {
 
 		$remote_sha = $this->get_remote_version();
 
-		update_option( 'hap_last_update', current_time( 'mysql' ) );
-		update_option( 'hap_last_update_version', (string) time() );
+		update_option( 'hap_profile_last_update', current_time( 'mysql' ) );
+		update_option( 'hap_profile_last_update_version', (string) time() );
 
 		if ( $remote_sha && ! is_wp_error( $remote_sha ) ) {
-			update_option( 'hap_last_update_sha', $remote_sha );
+			update_option( 'hap_profile_last_update_sha', $remote_sha );
 		}
 
 		if ( function_exists( 'wp_clean_plugins_cache' ) ) {
@@ -467,8 +467,8 @@ class HAP_Profile_Updater {
 
 	public static function get_version_string() {
 		$base_version    = HAP_VERSION;
-		$last_sha        = substr( (string) get_option( 'hap_last_update_sha', '' ), 0, 7 );
-		$last_update_ver = (string) get_option( 'hap_last_update_version', '' );
+		$last_sha        = substr( (string) get_option( 'hap_profile_last_update_sha', '' ), 0, 7 );
+		$last_update_ver = (string) get_option( 'hap_profile_last_update_version', '' );
 
 		if ( $last_update_ver ) {
 			return $base_version . '-' . $last_update_ver . ( $last_sha ? '-' . $last_sha : '' );

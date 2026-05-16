@@ -1198,8 +1198,8 @@ class HAP_Profile_Admin {
 		$updater  = new HAP_Profile_Updater();
 		$s        = $updater->get_settings();
 		$notice   = $updater->get_update_notice( true );
-		$last_sha = (string) get_option( 'hap_last_update_sha', '' );
-		$last_upd = (string) get_option( 'hap_last_update', '' );
+		$last_sha = (string) get_option( 'hap_profile_last_update_sha', '' );
+		$last_upd = (string) get_option( 'hap_profile_last_update', '' );
 		$last_err = $updater->get_last_update_error();
 		$debug    = $updater->get_last_update_debug();
 
