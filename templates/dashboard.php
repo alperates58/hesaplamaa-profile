@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -218,7 +218,7 @@ foreach ( $user_shares as $share_item ) {
 			<section class="hap-results-area hap-featured-area">
 				<div class="hap-section-heading">
 					<div>
-						<span class="hap-eyebrow">Öne Çıkan Sonuçlar</span>
+						<span class="hap-eyebrow">Analizleriniz</span>
 						<h2 class="hap-section-title">Öne Çıkan Sonuçlar</h2>
 					</div>
 				</div>
@@ -257,7 +257,7 @@ foreach ( $user_shares as $share_item ) {
 			<section class="hap-results-area">
 				<div class="hap-section-heading">
 					<div>
-						<span class="hap-eyebrow">Kişisel Sonuçların</span>
+						<span class="hap-eyebrow">Tüm Sonuçlarınız</span>
 						<h2 class="hap-section-title">Kişisel Sonuçların</h2>
 					</div>
 				</div>
@@ -433,7 +433,7 @@ foreach ( $user_shares as $share_item ) {
 				<details class="hap-collapsible">
 					<summary class="hap-collapsible-summary">
 						<div>
-							<span class="hap-eyebrow">Sonraki analizler</span>
+							<span class="hap-eyebrow">Yakında</span>
 							<h2 class="hap-section-title">Sonraki analizler</h2>
 							<p class="hap-section-copy">Bu analizler için bilgiler hazır; sonuç motoru hazırlandığında burada görünecek.</p>
 						</div>
@@ -457,7 +457,7 @@ foreach ( $user_shares as $share_item ) {
 			<section class="hap-results-area">
 				<div class="hap-section-heading">
 					<div>
-						<span class="hap-eyebrow">Eksik Bilgiyle Açılacak Analizler</span>
+						<span class="hap-eyebrow">Profil Tamamlama</span>
 						<h2 class="hap-section-title">Eksik Bilgiyle Açılacak Analizler</h2>
 					</div>
 					<a href="<?php echo esc_url( $edit_url ); ?>" class="hap-btn hap-btn-primary">Eksik bilgileri tamamla</a>
@@ -489,7 +489,7 @@ foreach ( $user_shares as $share_item ) {
 		<section class="hap-sections-area" aria-labelledby="hap-analysis-title">
 			<div class="hap-section-heading">
 				<div>
-					<span class="hap-eyebrow">Analiz Kategorileri</span>
+					<span class="hap-eyebrow">Kategoriler</span>
 					<h2 class="hap-section-title" id="hap-analysis-title">Analiz Kategorileri</h2>
 				</div>
 			</div>

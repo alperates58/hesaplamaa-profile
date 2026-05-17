@@ -652,6 +652,9 @@ class HAP_Profile_Fields {
 			return '';
 		}
 
+		// "Hesaplama" son ekini kaldır (ör. "Vücut Kitle İndeksi Hesaplama" → "Vücut Kitle İndeksi").
+		$title = trim( preg_replace( '/\s+Hesaplama\s*$/ui', '', $title ) );
+
 		$replacements = array(
 			'Tarihine Gore' => 'Tarihine Göre',
 			'Gunluk'        => 'Günlük',
@@ -666,6 +669,7 @@ class HAP_Profile_Fields {
 			'Jupiter'       => 'Jüpiter',
 			'Saturn'        => 'Satürn',
 			'Ask'           => 'Aşk',
+			'Ideal'         => 'İdeal',
 			'Indeksi'       => 'İndeksi',
 			'Orani'         => 'Oranı',
 			'Kalca'         => 'Kalça',
@@ -826,17 +830,41 @@ class HAP_Profile_Fields {
 	}
 
 	/**
-	 * Suite tablosundaki tüm profil alanlarını mevcut config ile karşılaştırır;
+	 * Suite tablosundaki profil alanlarını mevcut config ile karşılaştırır;
 	 * yeni olanları pasif (active=0) olarak option'a ekler.
 	 *
+	 * @param array $args {
+	 *     @type bool $include_tool_only   Varsayılan false.
+	 *     @type bool $include_disabled    Varsayılan false.
+	 *     @type bool $require_backend     Varsayılan true — yalnızca backend_count > 0 alanları ekler.
+	 *     @type bool $dry_run             Varsayılan false — kaydetmeden sayıları döner.
+	 * }
 	 * @return array  [ 'added' => int, 'updated' => int ]
 	 */
-	public static function sync_fields_from_suite() {
+	public static function sync_fields_from_suite( $args = array() ) {
 		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
 			return array( 'added' => 0, 'updated' => 0 );
 		}
 
-		$suite_fields = HAP_Suite_Module_Fields::get_available_profile_fields( array( 'statuses' => array( 'profile_core', 'profile_optional', 'tool_only' ) ) );
+		$require_backend = isset( $args['require_backend'] ) ? (bool) $args['require_backend'] : true;
+		$dry_run         = ! empty( $args['dry_run'] );
+
+		$statuses = array( 'profile_core', 'profile_optional' );
+		if ( ! empty( $args['include_tool_only'] ) ) {
+			$statuses[] = 'tool_only';
+		}
+		if ( ! empty( $args['include_disabled'] ) ) {
+			$statuses[] = 'disabled';
+		}
+
+		$suite_fields = HAP_Suite_Module_Fields::get_available_profile_fields( array( 'statuses' => $statuses ) );
+
+		// Yalnızca backend destekli alanları dahil et (varsayılan).
+		if ( $require_backend ) {
+			$suite_fields = array_values( array_filter( $suite_fields, function ( $sf ) {
+				return (int) $sf['backend_count'] > 0;
+			} ) );
+		}
 		$impact       = HAP_Suite_Module_Fields::get_field_impact_summary();
 		$current      = self::get_fields();
 		$current_keys = array_column( $current, 'field_key' );
@@ -886,7 +914,9 @@ class HAP_Profile_Fields {
 			}
 		}
 
-		self::save_fields( $current );
+		if ( ! $dry_run ) {
+			self::save_fields( $current );
+		}
 		return array( 'added' => $added, 'updated' => $updated );
 	}
 

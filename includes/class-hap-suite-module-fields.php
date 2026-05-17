@@ -87,7 +87,12 @@ class HAP_Suite_Module_Fields {
 	 * Belirli bir profil alanıyla çalışan modülleri döner.
 	 *
 	 * @param string $profile_field
-	 * @param array  $args
+	 * @param array  $args {
+	 *     @type bool $include_tool_only  Varsayılan false.
+	 *     @type bool $include_disabled   Varsayılan false.
+	 *     @type int  $limit
+	 *     @type int  $offset
+	 * }
 	 * @return array
 	 */
 	public static function get_modules_for_field( $profile_field, $args = array() ) {
@@ -99,21 +104,31 @@ class HAP_Suite_Module_Fields {
 		$limit    = absint( $args['limit'] ?? 100 );
 		$offset   = absint( $args['offset'] ?? 0 );
 
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT DISTINCT module_slug, module_title, section, suggested_profile_status,
-				        backend_supported, ai_useful, is_sensitive, is_custom_field
-				 FROM `{$table}`
-				 WHERE profile_field = %s
-				 ORDER BY suggested_profile_status, module_title
-				 LIMIT %d OFFSET %d",
-				$profile_field,
-				$limit,
-				$offset
-			),
-			ARRAY_A
+		$statuses = array( 'profile_core', 'profile_optional' );
+		if ( ! empty( $args['include_tool_only'] ) ) {
+			$statuses[] = 'tool_only';
+		}
+		if ( ! empty( $args['include_disabled'] ) ) {
+			$statuses[] = 'disabled';
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+		// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$sql = $wpdb->prepare(
+			"SELECT DISTINCT module_slug, module_title, section, suggested_profile_status,
+			        backend_supported, ai_useful, is_sensitive, is_custom_field
+			 FROM `{$table}`
+			 WHERE profile_field = %s
+			   AND suggested_profile_status IN ({$placeholders})
+			 ORDER BY
+			   FIELD(suggested_profile_status, 'profile_core', 'profile_optional', 'tool_only', 'disabled'),
+			   backend_supported DESC,
+			   module_title ASC
+			 LIMIT %d OFFSET %d",
+			array_merge( array( $profile_field ), $statuses, array( $limit, $offset ) )
 		);
 
+		$rows = $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		return is_array( $rows ) ? $rows : array();
 	}
 
@@ -215,6 +230,7 @@ class HAP_Suite_Module_Fields {
 
 	/**
 	 * Her profil alanı için kaç modül + backend destekli sayısı döner.
+	 * Yalnızca profile_core/profile_optional satırlarını sayar; label için öncelik zinciri uygular.
 	 *
 	 * @return array  [ profile_field => ['module_count'=>int,'backend_count'=>int,'field_label'=>str] ]
 	 */
@@ -225,23 +241,73 @@ class HAP_Suite_Module_Fields {
 		global $wpdb;
 		$table = $wpdb->prefix . self::SUITE_TABLE;
 
-		$rows = $wpdb->get_results(
-			"SELECT profile_field, field_label,
+		// GROUP BY yalnızca profile_field; label için core/optional satırlarından MAX al.
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT profile_field,
+			        MAX(CASE WHEN suggested_profile_status IN ('profile_core','profile_optional') THEN field_label ELSE NULL END) AS best_label,
 			        COUNT(DISTINCT module_slug) AS module_count,
 			        SUM(CASE WHEN backend_supported = 1 THEN 1 ELSE 0 END) AS backend_count
 			 FROM `{$table}`
 			 WHERE profile_field != ''
-			 GROUP BY profile_field, field_label
+			   AND suggested_profile_status IN ('profile_core','profile_optional')
+			 GROUP BY profile_field
 			 ORDER BY module_count DESC
 			 LIMIT 200",
 			ARRAY_A
 		);
 
+		// Varsayılan Türkçe etiket sözlüğü (B önceliği).
+		$default_labels = array(
+			'gender'          => 'Cinsiyet',
+			'age'             => 'Yaş',
+			'weight'          => 'Kilo (kg)',
+			'height'          => 'Boy (cm)',
+			'birthdate'       => 'Doğum Tarihi',
+			'birth_date'      => 'Doğum Tarihi',
+			'city'            => 'Şehir',
+			'activity_level'  => 'Aktivite Düzeyi',
+			'goal'            => 'Hedef',
+			'body_fat'        => 'Vücut Yağ Oranı (%)',
+			'waist'           => 'Bel Çevresi (cm)',
+			'hip'             => 'Kalça Çevresi (cm)',
+			'neck'            => 'Boyun Çevresi (cm)',
+			'wrist'           => 'Bilek Çevresi (cm)',
+			'blood_type'      => 'Kan Grubu',
+			'diet_type'       => 'Beslenme Tipi',
+			'smoking'         => 'Sigara Kullanımı',
+			'alcohol'         => 'Alkol Kullanımı',
+			'sleep_hours'     => 'Uyku Süresi',
+			'water_intake'    => 'Su Tüketimi (L)',
+		);
+
 		$result = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				$result[ $row['profile_field'] ] = array(
-					'field_label'   => $row['field_label'],
+				$field_key = sanitize_key( $row['profile_field'] );
+
+				// A) HAP_Profile_Fields konfigürasyon etiketi.
+				$label = '';
+				if ( class_exists( 'HAP_Profile_Fields' ) ) {
+					$cfg = HAP_Profile_Fields::get_field_config( $field_key );
+					if ( $cfg && ! empty( $cfg['label'] ) ) {
+						$label = $cfg['label'];
+					}
+				}
+				// B) Varsayılan sözlük.
+				if ( '' === $label && isset( $default_labels[ $field_key ] ) ) {
+					$label = $default_labels[ $field_key ];
+				}
+				// C) Suite tablosundan gelen en iyi core/optional etiketi.
+				if ( '' === $label && ! empty( $row['best_label'] ) ) {
+					$label = $row['best_label'];
+				}
+				// D) Alan anahtarından üretilen etiket.
+				if ( '' === $label ) {
+					$label = ucwords( str_replace( '_', ' ', $field_key ) );
+				}
+
+				$result[ $field_key ] = array(
+					'field_label'   => sanitize_text_field( $label ),
 					'module_count'  => (int) $row['module_count'],
 					'backend_count' => (int) $row['backend_count'],
 				);
