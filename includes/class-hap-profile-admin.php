@@ -319,75 +319,96 @@ class HAP_Profile_Admin {
 	}
 
 	private function render_fields_tab() {
-		$fields = HAP_Profile_Fields::get_fields();
-		$steps  = HAP_Profile_Fields::get_active_steps();
+		$fields       = HAP_Profile_Fields::get_fields();
+		$steps        = HAP_Profile_Fields::get_steps();
+		$suite_active = class_exists( 'HAP_Suite_Module_Fields' ) && HAP_Suite_Module_Fields::table_exists();
 		settings_errors( 'hap_profile' );
 		?>
-		<form method="post">
+		<div style="display:flex;gap:24px;align-items:flex-start">
+		<div style="flex:1;min-width:0">
+
+		<div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+			<h2 style="margin:0">Profil Alanları</h2>
+			<?php if ( $suite_active ) : ?>
+			<button type="button" class="button button-secondary" id="hap-sync-suite-fields">
+				Suite Alanlarını Senkronize Et
+			</button>
+			<span id="hap-sync-suite-result" style="font-size:.85rem;color:#555"></span>
+			<?php else : ?>
+			<span style="color:#b32d2e;font-size:.85rem">Suite tablosu bulunamadı — senkronizasyon devre dışı.</span>
+			<?php endif; ?>
+		</div>
+
+		<form method="post" id="hap-fields-form">
 			<?php wp_nonce_field( 'hap_admin_action', 'hap_nonce' ); ?>
 			<input type="hidden" name="hap_action" value="save_fields">
-			<h2>Profil Alanları</h2>
-			<table class="widefat striped">
+			<table class="widefat striped" style="border-collapse:collapse">
 				<thead>
 					<tr>
-						<th>Alan</th>
+						<th>Alan (field_key)</th>
 						<th>Etiket</th>
 						<th>Tip</th>
 						<th>Adım</th>
 						<th>Aktif</th>
-						<th>Minimum profil zorunlu mu?</th>
-						<th>Hassas mı?</th>
-						<th>Bu alanla açılan modül sayısı</th>
-						<th>Düzenle</th>
+						<th>Min. zorunlu</th>
+						<th>AI dahil</th>
+						<th>Hassas</th>
+						<th>Suite modül</th>
+						<th>Backend</th>
+						<th>İşlem</th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php foreach ( $fields as $field ) : ?>
-						<?php $unlocked = HAP_Profile_Fields::get_modules_for_field( $field['field_key'] ); ?>
-						<tr>
-							<td><code><?php echo esc_html( $field['field_key'] ); ?></code></td>
-							<td><input type="text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][label]" value="<?php echo esc_attr( $field['label'] ); ?>"></td>
-							<td><input type="text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][type]" value="<?php echo esc_attr( $field['type'] ); ?>"></td>
+						<?php
+						$fk     = $field['field_key'];
+						$impact = HAP_Profile_Fields::get_field_impact( $fk );
+						$m_cnt  = $field['suite_module_count'] ?: $impact['module_count'] ?? 0;
+						$b_cnt  = $field['suite_backend_supported_count'] ?: $impact['backend_count'] ?? 0;
+						?>
+						<tr class="hap-field-row" data-field-key="<?php echo esc_attr( $fk ); ?>" style="vertical-align:middle">
 							<td>
-								<select name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][step_key]">
+								<code><?php echo esc_html( $fk ); ?></code>
+								<?php if ( ( $field['source'] ?? '' ) === 'suite_discovered' ) : ?>
+									<span style="font-size:.75rem;background:#e6f0fb;padding:1px 5px;border-radius:3px;color:#0077aa">Suite</span>
+								<?php endif; ?>
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][source]" value="<?php echo esc_attr( $field['source'] ?? 'default' ); ?>">
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][options]" value="<?php echo esc_attr( wp_json_encode( $field['options'] ) ); ?>">
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][user_meta_key]" value="<?php echo esc_attr( $field['user_meta_key'] ); ?>">
+							</td>
+							<td><input type="text" name="hap_fields[<?php echo esc_attr( $fk ); ?>][label]" value="<?php echo esc_attr( $field['label'] ); ?>" style="width:110px"></td>
+							<td><input type="text" name="hap_fields[<?php echo esc_attr( $fk ); ?>][type]" value="<?php echo esc_attr( $field['type'] ); ?>" style="width:70px"></td>
+							<td>
+								<select name="hap_fields[<?php echo esc_attr( $fk ); ?>][step_key]" style="max-width:130px">
 									<?php foreach ( $steps as $step ) : ?>
 										<option value="<?php echo esc_attr( $step['step_key'] ); ?>" <?php selected( $field['step_key'], $step['step_key'] ); ?>><?php echo esc_html( $step['title'] ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</td>
-							<td><input type="checkbox" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][active]" value="1" <?php checked( ! empty( $field['active'] ) ); ?>></td>
-							<td><input type="checkbox" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][required_for_minimum_profile]" value="1" <?php checked( ! empty( $field['required_for_minimum_profile'] ) ); ?>></td>
-							<td><input type="checkbox" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][sensitive]" value="1" <?php checked( ! empty( $field['sensitive'] ) ); ?>></td>
-							<td><?php echo esc_html( count( $unlocked ) ); ?></td>
-							<td>Detay aşağıda</td>
-
-							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][options]" value="<?php echo esc_attr( wp_json_encode( $field['options'] ) ); ?>">
-							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][placeholder]" value="<?php echo esc_attr( $field['placeholder'] ); ?>">
-							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][help_text]" value="<?php echo esc_attr( $field['help_text'] ); ?>">
-							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][sort_order]" value="<?php echo esc_attr( $field['sort_order'] ); ?>">
-							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][public_visible_default]" value="<?php echo esc_attr( $field['public_visible_default'] ); ?>">
-							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][validation_rule]" value="<?php echo esc_attr( $field['validation_rule'] ); ?>">
-							<input type="hidden" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][user_meta_key]" value="<?php echo esc_attr( $field['user_meta_key'] ); ?>">
-						</tr>
-						<tr>
-							<td colspan="9">
-								<strong>Alan detayı:</strong>
-								<div>field_key: <code><?php echo esc_html( $field['field_key'] ); ?></code></div>
-								<div>help_text: <input type="text" class="regular-text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][help_text]" value="<?php echo esc_attr( $field['help_text'] ); ?>"></div>
-								<div>placeholder: <input type="text" class="regular-text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][placeholder]" value="<?php echo esc_attr( $field['placeholder'] ); ?>"></div>
-								<div>sort_order: <input type="number" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][sort_order]" value="<?php echo esc_attr( $field['sort_order'] ); ?>"></div>
-								<div>public_visible_default: <input type="checkbox" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][public_visible_default]" value="1" <?php checked( ! empty( $field['public_visible_default'] ) ); ?>></div>
-								<div>validation_rule: <input type="text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][validation_rule]" value="<?php echo esc_attr( $field['validation_rule'] ); ?>"></div>
-								<div>user_meta_key: <input type="text" class="regular-text" name="hap_fields[<?php echo esc_attr( $field['field_key'] ); ?>][user_meta_key]" value="<?php echo esc_attr( $field['user_meta_key'] ); ?>"></div>
-								<div>modules_unlocked:
-									<?php if ( empty( $unlocked ) ) : ?>
-										<span>Yok</span>
-									<?php else : ?>
-										<?php foreach ( $unlocked as $module ) : ?>
-											<span class="hap-tag"><?php echo esc_html( $module['title'] ); ?> (<?php echo esc_html( $module['section'] ); ?> / <?php echo esc_html( $module['profile_status'] ); ?>)</span>
-										<?php endforeach; ?>
-									<?php endif; ?>
-								</div>
+							<td style="text-align:center"><input type="checkbox" name="hap_fields[<?php echo esc_attr( $fk ); ?>][active]" value="1" <?php checked( ! empty( $field['active'] ) ); ?>></td>
+							<td style="text-align:center"><input type="checkbox" name="hap_fields[<?php echo esc_attr( $fk ); ?>][required_for_minimum_profile]" value="1" <?php checked( ! empty( $field['required_for_minimum_profile'] ) ); ?>></td>
+							<td style="text-align:center"><input type="checkbox" name="hap_fields[<?php echo esc_attr( $fk ); ?>][ai_include]" value="1" <?php checked( ! empty( $field['ai_include'] ) || ! isset( $field['ai_include'] ) ); ?>></td>
+							<td style="text-align:center"><input type="checkbox" name="hap_fields[<?php echo esc_attr( $fk ); ?>][sensitive]" value="1" <?php checked( ! empty( $field['sensitive'] ) ); ?>></td>
+							<td style="text-align:center">
+								<strong><?php echo esc_html( $m_cnt ); ?></strong>
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][suite_module_count]" value="<?php echo absint( $m_cnt ); ?>">
+							</td>
+							<td style="text-align:center">
+								<?php echo esc_html( $b_cnt ); ?>
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][suite_backend_supported_count]" value="<?php echo absint( $b_cnt ); ?>">
+							</td>
+							<td>
+								<?php if ( $suite_active ) : ?>
+								<button type="button" class="button button-small hap-show-field-modules" data-field-key="<?php echo esc_attr( $fk ); ?>">
+									Modülleri Gör
+								</button>
+								<?php endif; ?>
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][sort_order]" value="<?php echo absint( $field['sort_order'] ); ?>">
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][placeholder]" value="<?php echo esc_attr( $field['placeholder'] ); ?>">
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][help_text]" value="<?php echo esc_attr( $field['help_text'] ); ?>">
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][validation_rule]" value="<?php echo esc_attr( $field['validation_rule'] ); ?>">
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][public_visible_default]" value="<?php echo absint( $field['public_visible_default'] ?? 1 ); ?>">
+								<input type="hidden" name="hap_fields[<?php echo esc_attr( $fk ); ?>][required_for_ai_report]" value="<?php echo absint( $field['required_for_ai_report'] ?? 0 ); ?>">
 							</td>
 						</tr>
 					<?php endforeach; ?>
@@ -395,6 +416,142 @@ class HAP_Profile_Admin {
 			</table>
 			<?php submit_button( 'Alanları Kaydet' ); ?>
 		</form>
+
+		</div><!-- .left -->
+
+		<!-- Sağ panel: Suite modülleri -->
+		<div id="hap-field-suite-panel" style="width:380px;min-width:300px;display:none;background:#fff;border:1px solid #ccd0d4;border-radius:4px;padding:16px;position:sticky;top:32px">
+			<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+				<strong id="hap-suite-panel-title">Bu alanla açılabilecek modüller</strong>
+				<button type="button" class="button-link" id="hap-close-suite-panel" style="font-size:18px;line-height:1">&times;</button>
+			</div>
+			<div id="hap-suite-panel-body">
+				<p style="color:#888">Bir alan seçin.</p>
+			</div>
+		</div>
+
+		</div><!-- flex wrapper -->
+
+		<script>
+		jQuery(function($){
+			var nonce = hapAdmin.nonce;
+			var ajaxUrl = hapAdmin.ajaxUrl;
+			var $panel = $('#hap-field-suite-panel');
+			var $panelBody = $('#hap-suite-panel-body');
+			var $panelTitle = $('#hap-suite-panel-title');
+
+			// Alan satırına tıklayınca Suite modülleri yükle
+			$(document).on('click', '.hap-show-field-modules', function(){
+				var $btn = $(this);
+				var fieldKey = $btn.data('field-key');
+				$panelTitle.text(fieldKey + ' — Suite modülleri');
+				$panel.show();
+				$panelBody.html('<p>Yükleniyor...</p>');
+
+				$.post(ajaxUrl, {
+					action: 'hap_get_field_suite_modules',
+					nonce: nonce,
+					field_key: fieldKey
+				}, function(res){
+					if (!res.success || !res.data || !res.data.modules) {
+						$panelBody.html('<p style="color:#b32d2e">Modül bulunamadı veya Suite tablosu yok.</p>');
+						return;
+					}
+					var modules = res.data.modules;
+					var fieldKey = res.data.field_key;
+					if (!modules.length) {
+						$panelBody.html('<p>Bu alanla eşleşen Suite modülü bulunamadı.</p>');
+						return;
+					}
+					var html = '<table class="widefat striped" style="font-size:.82rem"><thead><tr><th>Modül</th><th>Bölüm</th><th>Öneri</th><th>Backend</th><th>İşlem</th></tr></thead><tbody>';
+					$.each(modules, function(i, m){
+						var statusBadge = {
+							profile_core: '<span style="background:#00a32a;color:#fff;padding:1px 5px;border-radius:2px;font-size:.72rem">Core</span>',
+							profile_optional: '<span style="background:#2271b1;color:#fff;padding:1px 5px;border-radius:2px;font-size:.72rem">Optional</span>',
+							tool_only: '<span style="background:#888;color:#fff;padding:1px 5px;border-radius:2px;font-size:.72rem">Tool</span>',
+							disabled: '<span style="background:#ccc;color:#333;padding:1px 5px;border-radius:2px;font-size:.72rem">Disabled</span>'
+						}[m.suggested_profile_status] || m.suggested_profile_status;
+
+						var backendBadge = m.backend_supported == 1
+							? '<span style="color:#00a32a">✓ Evet</span>'
+							: '<span style="color:#b32d2e">JS only</span>';
+
+						html += '<tr>';
+						html += '<td>' + $('<span>').text(m.module_title || m.module_slug).html() + '<br><small style="color:#888">' + $('<span>').text(m.module_slug).html() + '</small></td>';
+						html += '<td>' + $('<span>').text(m.section || '').html() + '</td>';
+						html += '<td>' + statusBadge + '</td>';
+						html += '<td>' + backendBadge + '</td>';
+						html += '<td style="white-space:nowrap">';
+						html += '<button class="button button-small hap-apply-suite-mapping" data-slug="' + $('<span>').text(m.module_slug).html() + '" data-status="profile_core" data-field="' + $('<span>').text(fieldKey).html() + '" style="margin-bottom:2px">Core yap</button><br>';
+						html += '<button class="button button-small hap-apply-suite-mapping" data-slug="' + $('<span>').text(m.module_slug).html() + '" data-status="profile_optional" data-field="' + $('<span>').text(fieldKey).html() + '" style="margin-bottom:2px">Optional yap</button><br>';
+						html += '<button class="button button-small hap-apply-suite-mapping" data-slug="' + $('<span>').text(m.module_slug).html() + '" data-status="tool_only" data-field="' + $('<span>').text(fieldKey).html() + '">Tool Only</button>';
+						html += '</td>';
+						html += '</tr>';
+					});
+					html += '</tbody></table>';
+					$panelBody.html(html);
+				}).fail(function(){
+					$panelBody.html('<p style="color:#b32d2e">AJAX hatası.</p>');
+				});
+			});
+
+			// Suite mapping uygula
+			$(document).on('click', '.hap-apply-suite-mapping', function(){
+				var $btn = $(this);
+				var slug = $btn.data('slug');
+				var status = $btn.data('status');
+				var fieldKey = $btn.data('field');
+				$btn.prop('disabled', true).text('Uygulanıyor...');
+
+				$.post(ajaxUrl, {
+					action: 'hap_apply_suite_mapping',
+					nonce: nonce,
+					module_slug: slug,
+					profile_status: status,
+					field_key: fieldKey
+				}, function(res){
+					$btn.prop('disabled', false).text(status === 'profile_core' ? 'Core yap' : (status === 'profile_optional' ? 'Optional yap' : 'Tool Only'));
+					if (res.success) {
+						$btn.closest('tr').find('td:nth-child(3)').html('<span style="background:#00a32a;color:#fff;padding:1px 5px;border-radius:2px;font-size:.72rem">' + status + '</span>');
+					} else {
+						alert('Hata: ' + (res.data && res.data.message ? res.data.message : 'Bilinmeyen hata'));
+					}
+				}).fail(function(){
+					$btn.prop('disabled', false);
+					alert('AJAX hatası.');
+				});
+			});
+
+			// Suite alanları senkronize et
+			$('#hap-sync-suite-fields').on('click', function(){
+				var $btn = $(this);
+				var $res = $('#hap-sync-suite-result');
+				$btn.prop('disabled', true).text('Senkronize ediliyor...');
+				$res.text('');
+
+				$.post(ajaxUrl, {
+					action: 'hap_sync_suite_fields',
+					nonce: nonce
+				}, function(res){
+					$btn.prop('disabled', false).text('Suite Alanlarını Senkronize Et');
+					if (res.success) {
+						$res.html('<span style="color:#00a32a">' + (res.data.message || 'Tamamlandı.') + '</span>');
+						setTimeout(function(){ location.reload(); }, 1200);
+					} else {
+						$res.html('<span style="color:#b32d2e">' + (res.data && res.data.message ? res.data.message : 'Hata') + '</span>');
+					}
+				}).fail(function(){
+					$btn.prop('disabled', false);
+					$res.html('<span style="color:#b32d2e">AJAX hatası.</span>');
+				});
+			});
+
+			// Panel kapat
+			$('#hap-close-suite-panel').on('click', function(){
+				$panel.hide();
+			});
+		});
+		</script>
 		<?php
 	}
 
@@ -720,5 +877,151 @@ class HAP_Profile_Admin {
 	private function render_health_tab() {
 		echo '<h2>Sağlık Kontrolü</h2>';
 		$this->health->render();
+	}
+
+	// -------------------------------------------------------
+	// Yeni AJAX: Suite + Fields entegrasyonu
+	// -------------------------------------------------------
+
+	/**
+	 * Belirli bir field_key için Suite'ten modül listesi döner.
+	 */
+	public function ajax_get_field_suite_modules() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		$field_key = sanitize_key( wp_unslash( $_POST['field_key'] ?? '' ) );
+		if ( ! $field_key ) {
+			wp_send_json_error( array( 'message' => 'field_key gerekli.' ) );
+		}
+
+		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
+			wp_send_json_error( array( 'message' => 'Suite tablosu bulunamadı.' ) );
+		}
+
+		$modules = HAP_Suite_Module_Fields::get_modules_for_field( $field_key, array( 'limit' => 60 ) );
+		wp_send_json_success( array( 'field_key' => $field_key, 'modules' => $modules ) );
+	}
+
+	/**
+	 * Suite tablosundan alınan modüle ait mapping'i wp_hap_profile_modules'a uygular.
+	 */
+	public function ajax_apply_suite_mapping() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		$module_slug    = sanitize_title( wp_unslash( $_POST['module_slug'] ?? '' ) );
+		$profile_status = sanitize_key( $_POST['profile_status'] ?? 'profile_optional' );
+		$field_key      = sanitize_key( wp_unslash( $_POST['field_key'] ?? '' ) );
+
+		$allowed_statuses = array( 'profile_core', 'profile_optional', 'tool_only', 'disabled' );
+		if ( ! in_array( $profile_status, $allowed_statuses, true ) ) {
+			$profile_status = 'profile_optional';
+		}
+
+		if ( ! $module_slug ) {
+			wp_send_json_error( array( 'message' => 'module_slug gerekli.' ) );
+		}
+
+		$manifest = class_exists( 'HAP_Suite_Module_Fields' )
+			? HAP_Suite_Module_Fields::get_module_manifest( $module_slug )
+			: null;
+
+		$existing = $this->modules->get_module_by_slug( $module_slug );
+
+		$backend_supported = $manifest['backend_supported'] ?? false;
+		$runner_type       = $backend_supported ? 'php_callback' : 'js_frontend_only';
+		$runner_status     = $backend_supported ? 'ok' : 'pending_adapter';
+
+		$data = array(
+			'slug'                    => $module_slug,
+			'title'                   => $manifest['module_title'] ?? ( $existing['title'] ?? HAP_Profile_Fields::humanize_module_title( $module_slug ) ),
+			'section'                 => $manifest['section'] ?? ( $existing['section'] ?? '' ),
+			'profile_status'          => $profile_status,
+			'required_fields'         => $manifest ? $manifest['required_fields'] : array( $field_key ),
+			'input_mapping'           => $manifest ? wp_json_encode( $manifest['input_mapping'] ) : '',
+			'runner_type'             => $runner_type,
+			'runner_status'           => $runner_status,
+			'suite_source'            => 'suite_table',
+			'suite_last_synced_at'    => current_time( 'mysql' ),
+			'suite_backend_supported' => $backend_supported ? 1 : 0,
+			'suite_section'           => $manifest['section'] ?? '',
+			'suite_required_fields'   => $manifest ? wp_json_encode( $manifest['required_fields'] ) : '',
+			'suite_input_mapping'     => $manifest ? wp_json_encode( $manifest['input_mapping'] ) : '',
+			'availability_status'     => 'active',
+			'source'                  => 'suite_sync',
+		);
+
+		if ( $existing ) {
+			// Manuel ayarları koru
+			$data['result_enabled']            = $existing['result_enabled'] ?? 1;
+			$data['ai_include']                = $existing['ai_include'] ?? 1;
+			$data['share_include_default']     = $existing['share_include_default'] ?? 0;
+			$data['onboarding_prompt_enabled'] = $existing['onboarding_prompt_enabled'] ?? 1;
+			$id = $this->modules->save_module( $data, (int) $existing['id'] );
+		} else {
+			$data['result_enabled']            = $backend_supported ? 1 : 0;
+			$data['ai_include']                = 1;
+			$data['share_include_default']     = 0;
+			$data['onboarding_prompt_enabled'] = 1;
+			$id = $this->modules->save_module( $data );
+		}
+
+		wp_send_json_success( array(
+			'message'        => 'Mapping uygulandı.',
+			'module_slug'    => $module_slug,
+			'profile_status' => $profile_status,
+			'module_id'      => $id,
+		) );
+	}
+
+	/**
+	 * Suite tablosundaki tüm profil alanlarını option'a senkronize eder.
+	 */
+	public function ajax_sync_suite_fields() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
+			wp_send_json_error( array( 'message' => 'Suite tablosu bulunamadı.' ) );
+		}
+
+		$result = HAP_Profile_Fields::sync_fields_from_suite();
+		wp_send_json_success( array(
+			'message' => sprintf( '%d yeni alan eklendi, %d alan güncellendi.', $result['added'], $result['updated'] ),
+			'added'   => $result['added'],
+			'updated' => $result['updated'],
+		) );
+	}
+
+	/**
+	 * Modülün profile_status'ını AJAX ile günceller.
+	 */
+	public function ajax_update_module_profile_status() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		$module_slug    = sanitize_title( wp_unslash( $_POST['module_slug'] ?? '' ) );
+		$profile_status = sanitize_key( $_POST['profile_status'] ?? '' );
+		$allowed        = array( 'profile_core', 'profile_optional', 'tool_only', 'disabled' );
+		if ( ! in_array( $profile_status, $allowed, true ) || ! $module_slug ) {
+			wp_send_json_error( array( 'message' => 'Geçersiz parametre.' ) );
+		}
+
+		$existing = $this->modules->get_module_by_slug( $module_slug );
+		if ( ! $existing ) {
+			wp_send_json_error( array( 'message' => 'Modül bulunamadı.' ) );
+		}
+
+		$this->modules->save_module( array_merge( $existing, array( 'profile_status' => $profile_status ) ), (int) $existing['id'] );
+		wp_send_json_success( array( 'message' => 'Durum güncellendi.', 'profile_status' => $profile_status ) );
 	}
 }

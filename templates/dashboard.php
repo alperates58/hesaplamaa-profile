@@ -310,6 +310,124 @@ foreach ( $user_shares as $share_item ) {
 			</section>
 		<?php endif; ?>
 
+		<?php
+		// -------------------------------------------------------
+		// AI Kişisel Analiz Raporu
+		// -------------------------------------------------------
+		$ai_settings       = class_exists( 'HAP_Profile_AI_Provider' ) ? HAP_Profile_AI_Provider::get_settings() : array();
+		$ai_globally_enabled = ! empty( $settings['ai_enabled'] );
+		$ai_report         = null;
+		$ai_job            = null;
+		$ai_display_status = 'ai_disabled';
+
+		if ( $ai_globally_enabled && class_exists( 'HAP_Profile_AI_Reports' ) ) {
+			$ai_report = HAP_Profile_AI_Reports::get_latest_report( $user_id );
+			$ai_job    = HAP_Profile_AI_Reports::get_latest_job( $user_id );
+			if ( $ai_report ) {
+				$ai_display_status = 'completed';
+			} elseif ( $ai_job && in_array( $ai_job['status'] ?? '', array( 'pending', 'processing' ), true ) ) {
+				$ai_display_status = 'processing';
+			} elseif ( class_exists( 'HAP_Profile_Consents' ) && ! HAP_Profile_Consents::has_ai_consent( $user_id ) ) {
+				$ai_display_status = 'consent_required';
+			} else {
+				$ai_display_status = 'pending_configuration';
+			}
+		} elseif ( $ai_globally_enabled ) {
+			$ai_display_status = 'pending_configuration';
+		}
+
+		// URL param'dan gelen ai_status
+		$url_ai_status = isset( $_GET['ai_status'] ) ? sanitize_key( $_GET['ai_status'] ) : '';
+		if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
+			// url param değerini override et (sadece processing/completed geçerli)
+			if ( 'processing' === $url_ai_status && 'completed' !== $ai_display_status ) {
+				$ai_display_status = 'processing';
+			}
+		}
+		?>
+
+		<section class="hap-results-area hap-ai-section">
+			<div class="hap-section-heading">
+				<div>
+					<span class="hap-eyebrow">Yapay Zeka</span>
+					<h2 class="hap-section-title">AI Kişisel Analiz</h2>
+				</div>
+			</div>
+
+			<?php if ( 'completed' === $ai_display_status && $ai_report ) : ?>
+				<div class="hap-ai-report-card">
+					<?php if ( ! empty( $ai_report['summary'] ) ) : ?>
+					<div class="hap-ai-summary">
+						<p><?php echo esc_html( $ai_report['summary'] ); ?></p>
+					</div>
+					<?php endif; ?>
+
+					<?php if ( ! empty( $ai_report['sections'] ) ) : ?>
+					<div class="hap-ai-tabs">
+						<div class="hap-ai-tab-nav" role="tablist">
+							<?php $first_tab = true; ?>
+							<?php foreach ( $ai_report['sections'] as $sec_key => $sec_content ) : ?>
+								<?php if ( '' === $sec_content ) continue; ?>
+								<button type="button" class="hap-ai-tab-btn <?php echo $first_tab ? 'is-active' : ''; ?>"
+								        role="tab" data-ai-tab="<?php echo esc_attr( $sec_key ); ?>">
+									<?php echo esc_html( ucwords( str_replace( '_', ' ', $sec_key ) ) ); ?>
+								</button>
+								<?php $first_tab = false; ?>
+							<?php endforeach; ?>
+						</div>
+						<?php $first_panel = true; ?>
+						<?php foreach ( $ai_report['sections'] as $sec_key => $sec_content ) : ?>
+							<?php if ( '' === $sec_content ) continue; ?>
+							<div class="hap-ai-tab-panel <?php echo $first_panel ? 'is-active' : ''; ?>"
+							     role="tabpanel" data-ai-panel="<?php echo esc_attr( $sec_key ); ?>">
+								<div class="hap-ai-panel-body">
+									<?php echo wp_kses_post( wpautop( $sec_content ) ); ?>
+								</div>
+							</div>
+							<?php $first_panel = false; ?>
+						<?php endforeach; ?>
+					</div>
+					<?php endif; ?>
+
+					<?php if ( ! empty( $ai_report['full_report'] ) && empty( $ai_report['sections'] ) ) : ?>
+					<div class="hap-ai-full-report">
+						<?php echo wp_kses_post( wpautop( $ai_report['full_report'] ) ); ?>
+					</div>
+					<?php endif; ?>
+
+					<p class="hap-disclaimer" style="font-size:.78rem;color:#888;margin-top:16px">
+						Bu analiz yalnızca bilgilendirme amaçlıdır. Tıbbi, finansal veya hukuki tavsiye niteliği taşımaz.
+					</p>
+				</div>
+
+			<?php elseif ( 'processing' === $ai_display_status ) : ?>
+				<div class="hap-ai-report-card hap-ai-report-card--processing">
+					<div class="hap-ai-loader"></div>
+					<p><strong>Analizin hazırlanıyor...</strong></p>
+					<p style="color:#888">Bu işlem birkaç dakika sürebilir. Sayfayı yenileyerek güncel durumu kontrol edebilirsin.</p>
+					<button type="button" class="hap-btn hap-btn-secondary" onclick="location.reload()">Sayfayı Yenile</button>
+				</div>
+
+			<?php elseif ( 'consent_required' === $ai_display_status ) : ?>
+				<div class="hap-ai-report-card hap-ai-report-card--consent">
+					<p><strong>AI analizi için açık rızan gerekiyor.</strong></p>
+					<p style="color:#888">Yapay zeka destekli kişisel analiz raporunu görmek için AI işleme onayını vermelisin.</p>
+					<a href="<?php echo esc_url( add_query_arg( 'step', 'account_consents', $current_page_url ) ); ?>" class="hap-btn hap-btn-primary">Onay Ver</a>
+				</div>
+
+			<?php elseif ( 'pending_configuration' === $ai_display_status ) : ?>
+				<div class="hap-ai-report-card hap-ai-report-card--pending">
+					<p><strong>AI yorum katmanı yakında aktif olacak.</strong></p>
+					<p style="color:#888">Kişisel analiz raporu hazırlandığında burada görünecek.</p>
+				</div>
+
+			<?php else : ?>
+				<div class="hap-ai-report-card hap-ai-report-card--disabled">
+					<p><strong>AI yorum katmanı yakında aktif olacak.</strong></p>
+				</div>
+			<?php endif; ?>
+		</section>
+
 		<?php if ( ! empty( $frontend_cards ) ) : ?>
 			<section class="hap-results-area">
 				<details class="hap-collapsible">
@@ -317,7 +435,7 @@ foreach ( $user_shares as $share_item ) {
 						<div>
 							<span class="hap-eyebrow">Sonraki analizler</span>
 							<h2 class="hap-section-title">Sonraki analizler</h2>
-							<p class="hap-section-copy">Bu analizler için bilgiler hazır; sonuç motoru bağlandığında burada görünecek.</p>
+							<p class="hap-section-copy">Bu analizler için bilgiler hazır; sonuç motoru hazırlandığında burada görünecek.</p>
 						</div>
 					</summary>
 					<div class="hap-results-grid hap-results-grid--pending">
@@ -325,9 +443,9 @@ foreach ( $user_shares as $share_item ) {
 							<article class="hap-result-card hap-result-card--pending is-ready">
 								<div class="hap-result-card-head">
 									<h3><?php echo esc_html( $runner_item['display_title'] ); ?></h3>
-									<span class="hap-status-pill hap-pending">Beklemede</span>
+									<span class="hap-status-pill hap-pending">Yakında</span>
 								</div>
-								<p class="hap-result-card-copy">Bilgilerin hazır. Sonuç motoru bağlandığında bu kart burada otomatik görünecek.</p>
+								<p class="hap-result-card-copy">Bilgilerin hazır. Sonuç motoru hazırlandığında bu kart burada otomatik görünecek.</p>
 							</article>
 						<?php endforeach; ?>
 					</div>

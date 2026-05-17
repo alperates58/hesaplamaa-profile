@@ -621,37 +621,6 @@ class HAP_Profile_Fields {
 		}
 	}
 
-	public static function get_modules_for_field( $field_key ) {
-		if ( ! class_exists( 'HAP_Profile_Modules' ) ) {
-			return array();
-		}
-
-		$field_key = sanitize_key( $field_key );
-		$modules   = new HAP_Profile_Modules();
-		$items     = $modules->get_modules(
-			array(
-				'availability_status' => 'active',
-				'result_enabled'      => 1,
-				'limit'               => 500,
-			)
-		);
-
-		$matches = array();
-		foreach ( $items as $module ) {
-			if ( ! in_array( $module['profile_status'], array( 'profile_core', 'profile_optional' ), true ) ) {
-				continue;
-			}
-
-			$required = $modules->decode_fields_json( $module['required_fields'] ?? array() );
-			$optional = $modules->decode_fields_json( $module['optional_fields'] ?? array() );
-			if ( in_array( $field_key, $required, true ) || in_array( $field_key, $optional, true ) ) {
-				$matches[] = $module;
-			}
-		}
-
-		return $matches;
-	}
-
 	public static function get_minimum_required_fields() {
 		$keys = array();
 		foreach ( self::get_active_fields() as $field ) {
@@ -660,15 +629,6 @@ class HAP_Profile_Fields {
 			}
 		}
 		return $keys;
-	}
-
-	public static function is_minimum_profile_complete( $user_id ) {
-		if ( ! class_exists( 'HAP_Profile_User_Data' ) ) {
-			return false;
-		}
-		$fields    = new self();
-		$user_data = new HAP_Profile_User_Data( $fields );
-		return $user_data->is_minimum_profile_complete( $user_id );
 	}
 
 	public static function get_sensitive_keys() {
@@ -763,17 +723,23 @@ class HAP_Profile_Fields {
 			'field_key'                    => $field_key,
 			'label'                        => sanitize_text_field( $field['label'] ?? '' ),
 			'type'                         => sanitize_key( $field['type'] ?? 'text' ),
+			'unit'                         => sanitize_text_field( $field['unit'] ?? '' ),
 			'options'                      => $options,
 			'placeholder'                  => sanitize_text_field( $field['placeholder'] ?? '' ),
 			'help_text'                    => sanitize_textarea_field( $field['help_text'] ?? $field['description'] ?? '' ),
 			'step_key'                     => sanitize_key( $field['step_key'] ?? 'basic_profile' ),
 			'sort_order'                   => absint( $field['sort_order'] ?? 0 ),
 			'required_for_minimum_profile' => ! empty( $field['required_for_minimum_profile'] ) ? 1 : 0,
+			'required_for_ai_report'       => ! empty( $field['required_for_ai_report'] ) ? 1 : 0,
 			'sensitive'                    => ! empty( $field['sensitive'] ) ? 1 : 0,
+			'ai_include'                   => isset( $field['ai_include'] ) ? ( ! empty( $field['ai_include'] ) ? 1 : 0 ) : 1,
 			'public_visible_default'       => ! empty( $field['public_visible_default'] ) ? 1 : 0,
 			'active'                       => ! empty( $field['active'] ) ? 1 : 0,
 			'validation_rule'              => sanitize_key( $field['validation_rule'] ?? ( $field['type'] ?? 'text' ) ),
 			'user_meta_key'                => sanitize_key( str_replace( '-', '_', $field['user_meta_key'] ?? '_hap_profile_' . $field_key ) ),
+			'source'                       => sanitize_key( $field['source'] ?? 'default' ),
+			'suite_module_count'           => absint( $field['suite_module_count'] ?? 0 ),
+			'suite_backend_supported_count'=> absint( $field['suite_backend_supported_count'] ?? 0 ),
 		);
 	}
 
@@ -807,5 +773,259 @@ class HAP_Profile_Fields {
 			$options[ sanitize_key( $key ) ] = sanitize_text_field( $label );
 		}
 		return $options;
+	}
+
+	// -------------------------------------------------------
+	// Suite entegrasyon metodları
+	// -------------------------------------------------------
+
+	/**
+	 * Suite tablosundan bir profile_field için field config oluşturur veya getirir.
+	 *
+	 * @param string $profile_field  Suite'deki profile_field değeri
+	 * @return array  normalize edilmiş field config
+	 */
+	public static function get_or_create_field_from_suite( $profile_field ) {
+		$profile_field = sanitize_key( $profile_field );
+		$existing      = self::get_field_config( $profile_field );
+		if ( $existing ) {
+			return $existing;
+		}
+
+		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
+			return array();
+		}
+
+		$impact  = HAP_Suite_Module_Fields::get_field_impact_summary();
+		$suite_info = $impact[ $profile_field ] ?? null;
+
+		$new_field = array(
+			'field_key'                    => $profile_field,
+			'label'                        => $suite_info ? ucfirst( str_replace( '_', ' ', $profile_field ) ) : ucfirst( str_replace( '_', ' ', $profile_field ) ),
+			'type'                         => 'text',
+			'unit'                         => '',
+			'options'                      => array(),
+			'placeholder'                  => '',
+			'help_text'                    => '',
+			'step_key'                     => 'basic_profile',
+			'sort_order'                   => 500,
+			'required_for_minimum_profile' => 0,
+			'required_for_ai_report'       => 0,
+			'sensitive'                    => 0,
+			'ai_include'                   => 1,
+			'public_visible_default'       => 1,
+			'active'                       => 0,
+			'validation_rule'              => 'text',
+			'user_meta_key'                => '_hap_profile_' . $profile_field,
+			'source'                       => 'suite_discovered',
+			'suite_module_count'           => $suite_info ? (int) $suite_info['module_count'] : 0,
+			'suite_backend_supported_count'=> $suite_info ? (int) $suite_info['backend_count'] : 0,
+		);
+
+		return $new_field;
+	}
+
+	/**
+	 * Suite tablosundaki tüm profil alanlarını mevcut config ile karşılaştırır;
+	 * yeni olanları pasif (active=0) olarak option'a ekler.
+	 *
+	 * @return array  [ 'added' => int, 'updated' => int ]
+	 */
+	public static function sync_fields_from_suite() {
+		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
+			return array( 'added' => 0, 'updated' => 0 );
+		}
+
+		$suite_fields = HAP_Suite_Module_Fields::get_available_profile_fields( array( 'statuses' => array( 'profile_core', 'profile_optional', 'tool_only' ) ) );
+		$impact       = HAP_Suite_Module_Fields::get_field_impact_summary();
+		$current      = self::get_fields();
+		$current_keys = array_column( $current, 'field_key' );
+
+		$added   = 0;
+		$updated = 0;
+
+		foreach ( $suite_fields as $sf ) {
+			$key = sanitize_key( $sf['profile_field'] );
+			if ( '' === $key ) {
+				continue;
+			}
+			$info = $impact[ $key ] ?? array();
+
+			$idx = array_search( $key, $current_keys, true );
+			if ( false !== $idx ) {
+				// Mevcut — sadece suite istatistiklerini güncelle.
+				$current[ $idx ]['suite_module_count']            = (int) ( $info['module_count'] ?? 0 );
+				$current[ $idx ]['suite_backend_supported_count'] = (int) ( $info['backend_count'] ?? 0 );
+				$updated++;
+			} else {
+				// Yeni — pasif olarak ekle.
+				$current[]      = array(
+					'field_key'                     => $key,
+					'label'                         => sanitize_text_field( $info['field_label'] ?? ucfirst( str_replace( '_', ' ', $key ) ) ),
+					'type'                          => 'text',
+					'unit'                          => '',
+					'options'                       => array(),
+					'placeholder'                   => '',
+					'help_text'                     => '',
+					'step_key'                      => 'basic_profile',
+					'sort_order'                    => 500 + $added,
+					'required_for_minimum_profile'  => 0,
+					'required_for_ai_report'        => 0,
+					'sensitive'                     => 0,
+					'ai_include'                    => 1,
+					'public_visible_default'        => 1,
+					'active'                        => 0,
+					'validation_rule'               => 'text',
+					'user_meta_key'                 => '_hap_profile_' . $key,
+					'source'                        => 'suite_discovered',
+					'suite_module_count'            => (int) ( $info['module_count'] ?? 0 ),
+					'suite_backend_supported_count' => (int) ( $info['backend_count'] ?? 0 ),
+				);
+				$current_keys[] = $key;
+				$added++;
+			}
+		}
+
+		self::save_fields( $current );
+		return array( 'added' => $added, 'updated' => $updated );
+	}
+
+	/**
+	 * Bir profil alanıyla açılan Suite modüllerini döner.
+	 * Önce Suite tablosuna bakar; yoksa wp_hap_profile_modules'a döner.
+	 *
+	 * @param string $field_key
+	 * @return array
+	 */
+	public static function get_modules_for_field( $field_key ) {
+		$field_key = sanitize_key( $field_key );
+
+		// Suite tablosundan dene.
+		if ( class_exists( 'HAP_Suite_Module_Fields' ) && HAP_Suite_Module_Fields::table_exists() ) {
+			return HAP_Suite_Module_Fields::get_modules_for_field( $field_key );
+		}
+
+		// Fallback: wp_hap_profile_modules
+		if ( ! class_exists( 'HAP_Profile_Modules' ) ) {
+			return array();
+		}
+		$modules = new HAP_Profile_Modules();
+		$items   = $modules->get_modules( array( 'availability_status' => 'active', 'result_enabled' => 1, 'limit' => 500 ) );
+		$matches = array();
+		foreach ( $items as $module ) {
+			if ( ! in_array( $module['profile_status'], array( 'profile_core', 'profile_optional' ), true ) ) {
+				continue;
+			}
+			$required = $modules->decode_fields_json( $module['required_fields'] ?? array() );
+			$optional = $modules->decode_fields_json( $module['optional_fields'] ?? array() );
+			if ( in_array( $field_key, $required, true ) || in_array( $field_key, $optional, true ) ) {
+				$matches[] = $module;
+			}
+		}
+		return $matches;
+	}
+
+	/**
+	 * Bir alanın etki özetini döner (kaç modül açıyor, backend destekli kaç).
+	 *
+	 * @param string $field_key
+	 * @return array
+	 */
+	public static function get_field_impact( $field_key ) {
+		$field_key = sanitize_key( $field_key );
+		if ( class_exists( 'HAP_Suite_Module_Fields' ) && HAP_Suite_Module_Fields::table_exists() ) {
+			$summary = HAP_Suite_Module_Fields::get_field_impact_summary();
+			return $summary[ $field_key ] ?? array( 'module_count' => 0, 'backend_count' => 0 );
+		}
+		return array( 'module_count' => 0, 'backend_count' => 0 );
+	}
+
+	/**
+	 * Kullanıcının bir field değerini döner.
+	 *
+	 * @param int    $user_id
+	 * @param string $field_key
+	 * @return mixed
+	 */
+	public static function get_user_field_value( $user_id, $field_key ) {
+		$field = self::get_field_config( $field_key );
+		if ( ! $field ) {
+			return '';
+		}
+		return get_user_meta( absint( $user_id ), $field['user_meta_key'], true );
+	}
+
+	/**
+	 * Kullanıcının bir field değerini kaydeder.
+	 *
+	 * @param int    $user_id
+	 * @param string $field_key
+	 * @param mixed  $value
+	 * @return bool
+	 */
+	public static function save_user_field_value( $user_id, $field_key, $value ) {
+		$field = self::get_field_config( $field_key );
+		if ( ! $field ) {
+			return false;
+		}
+		$sanitized = self::sanitize_field( $field_key, $value );
+		return (bool) update_user_meta( absint( $user_id ), $field['user_meta_key'], $sanitized );
+	}
+
+	/**
+	 * Bir field config'ini option'a kaydeder.
+	 *
+	 * @param string $field_key
+	 * @param array  $config
+	 * @return bool
+	 */
+	public static function save_field_config( $field_key, $config ) {
+		$field_key = sanitize_key( $field_key );
+		$fields    = self::get_fields();
+		$found     = false;
+		foreach ( $fields as &$f ) {
+			if ( $f['field_key'] === $field_key ) {
+				$f     = self::normalize_field_config( array_merge( $f, $config ) );
+				$found = true;
+				break;
+			}
+		}
+		unset( $f );
+		if ( ! $found ) {
+			$config['field_key'] = $field_key;
+			$fields[]            = self::normalize_field_config( $config );
+		}
+		return self::save_fields( $fields );
+	}
+
+	/**
+	 * Minimum profil tamamlanmış mı? (HAP_Profile_User_Data gerektirmez — basit kontrol)
+	 *
+	 * @param int $user_id
+	 * @return bool
+	 */
+	public static function is_minimum_profile_complete( $user_id ) {
+		if ( ! class_exists( 'HAP_Profile_User_Data' ) ) {
+			return false;
+		}
+		$fields_obj = new self();
+		$user_data  = new HAP_Profile_User_Data( $fields_obj );
+		return $user_data->is_minimum_profile_complete( $user_id );
+	}
+
+	/**
+	 * Eksik zorunlu alanları döner.
+	 *
+	 * @param int $user_id
+	 * @return array
+	 */
+	public static function get_missing_required_fields_for_user( $user_id ) {
+		if ( ! class_exists( 'HAP_Profile_User_Data' ) ) {
+			return array();
+		}
+		$fields_obj = new self();
+		$user_data  = new HAP_Profile_User_Data( $fields_obj );
+		$profile    = $user_data->get_user_profile_data( $user_id );
+		return $user_data->get_minimum_profile_missing_fields( $user_id, $profile );
 	}
 }
