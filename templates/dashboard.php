@@ -127,6 +127,14 @@ $hap_categories = array(
 			'jupiter-burcu-hesaplama',
 			'saturn-burcu-hesaplama',
 			'sidereal-burc-hesaplama',
+			'merkur-burcu-hesaplama',
+			'uranus-burcu-hesaplama',
+			'neptun-burcu-hesaplama',
+			'pluton-burcu-hesaplama',
+			'vedik-burc-hesaplama',
+			'kuzey-ay-dugumu-hesaplama',
+			'burc-elementi-hesaplama',
+			'burc-grubu-hesaplama',
 		),
 	),
 	'numerology'    => array(
@@ -145,6 +153,7 @@ $hap_categories = array(
 			'cin-burcu-hesaplama',
 			'cin-burcu-yili-hesaplama',
 			'cin-elementi-hesaplama',
+			'cin-burcu-dongusu-hesaplama',
 			'aura-rengi-hesaplama',
 			'dogum-tarot-karti-hesaplama',
 			'ask-tarot-karti-hesaplama',
@@ -171,6 +180,8 @@ $hap_categories = array(
 			'bazal-metabolizma-hizi-hesaplama',
 			'dinlenme-metabolizma-hizi',
 			'basit-kalori-ihtiyaci-hesaplama',
+			'aktivite-katsayisi',
+			'gunluk-kalori-ihtiyaci-hesaplama',
 			'maksimum-nabiz-hesaplama',
 			'hedef-nabiz-bolgesi-hesaplama',
 			'hedef-nabiz-hesaplama',
@@ -411,6 +422,17 @@ $result_explanations = array(
 	'saturn-burcu-hesaplama'               => 'Satürn burcunuz yaşam dersleri ve sorumluluk temasını işaret eder; sembolik referans olarak yorumlanabilir.',
 	'sidereal-burc-hesaplama'              => 'Lahiri Ayanamsa uygulanmış yıldızıl burç göstergesidir. Hint/Vedik astrolojisinde kullanılır.',
 	'cin-burcu-yili-hesaplama'             => 'Çin Yeni Yılı başlangıç tablosuna göre hesaplanan yıllık hayvan burcu göstergesidir.',
+	'merkur-burcu-hesaplama'               => 'Merkür\'ün doğum gününüzdeki yörünge konumundan hesaplanan düşünce ve iletişim temasını işaret eder.',
+	'uranus-burcu-hesaplama'               => 'Uranüs yavaş hareket eder; aynı dönemde doğanların ortak kuşak temasını gösterir. Sembolik referanstır.',
+	'neptun-burcu-hesaplama'               => 'Neptün çok yavaş hareket eder; kuşak teması olarak yorumlanan sembolik bir göstergedir.',
+	'pluton-burcu-hesaplama'               => 'Plüton çok yavaş hareket eder; dönüşüm ve kuşak temasını işaret eden sembolik bir göstergedir.',
+	'vedik-burc-hesaplama'                 => 'Lahiri Ayanamsa uygulanmış Hint/Vedik astroloji burç göstergesidir; Batı burcundan farklı çıkabilir.',
+	'kuzey-ay-dugumu-hesaplama'            => 'Kuzey Ay Düğümü (True Node) doğum haritasındaki evrim yönünü işaret eden sembolik bir göstergedir.',
+	'cin-burcu-dongusu-hesaplama'          => '60 yıllık Çin döngüsündeki Gök Sapı ve Yer Dalı kombinasyonunu gösterir; sembolik referanstır.',
+	'burc-elementi-hesaplama'              => 'Güneş burcunun Ateş, Toprak, Hava veya Su elementini gösterir; sembolik tema olarak yorumlanabilir.',
+	'burc-grubu-hesaplama'                 => 'Güneş burcunun Öncü, Sabit veya Değişken grubunu gösterir; sembolik tema olarak yorumlanabilir.',
+	'aktivite-katsayisi'                   => 'Fiziksel aktivite düzeyine karşılık gelen PAL katsayısını gösterir; TDEE hesabında kullanılır.',
+	'gunluk-kalori-ihtiyaci-hesaplama'     => 'Mifflin-St Jeor BMR × PAL formülüyle hesaplanan günlük toplam enerji harcaması tahminidir. Bilgilendirme amaçlıdır.',
 	'gunluk-su-ihtiyaci-hesaplama'         => 'Vücut ağırlığına göre tahmini günlük su ihtiyacını gösterir; bireysel koşullara göre değişir.',
 	'spor-protein-ihtiyaci-hesaplama'      => 'Aktivite düzeyine göre tahmini protein ihtiyacını gösterir. Bilgilendirme amaçlıdır.',
 	'adimdan-kaloriye-hesaplama'           => 'Adım sayısına karşılık gelen yaklaşık kalori harcamasını gösterir.',
@@ -475,6 +497,9 @@ if ( ! function_exists( 'hc_get_result_severity' ) ) {
 			'cin-elementi-hesaplama', 'aura-rengi-hesaplama', 'dogum-tarot-karti-hesaplama',
 			'ask-tarot-karti-hesaplama', 'burc-uyumu-hesaplama', 'cin-burcuna-gore-ask-uyumu-hesaplama',
 			'dogum-gunu-hesaplayici',
+			'merkur-burcu-hesaplama', 'uranus-burcu-hesaplama', 'neptun-burcu-hesaplama',
+			'pluton-burcu-hesaplama', 'vedik-burc-hesaplama', 'kuzey-ay-dugumu-hesaplama',
+			'cin-burcu-dongusu-hesaplama', 'burc-elementi-hesaplama', 'burc-grubu-hesaplama',
 		);
 		if ( in_array( $slug, $mystic, true ) ) { return 'is-mystic'; }
 		$sport = array(
@@ -488,7 +513,7 @@ if ( ! function_exists( 'hc_get_result_severity' ) ) {
 			'bazal-metabolizma-hizi-hesaplama', 'dinlenme-metabolizma-hizi', 'basit-kalori-ihtiyaci-hesaplama',
 			'maksimum-nabiz-hesaplama', 'hedef-nabiz-bolgesi-hesaplama', 'hedef-nabiz-hesaplama',
 			'nabiz-bolgesi-hesaplama', 'gunluk-su-ihtiyaci-hesaplama', 'spor-protein-ihtiyaci-hesaplama',
-			'ideal-kilo-hesaplama',
+			'ideal-kilo-hesaplama', 'aktivite-katsayisi', 'gunluk-kalori-ihtiyaci-hesaplama',
 		);
 		if ( in_array( $slug, $info, true ) ) { return 'is-info'; }
 		return 'is-success';

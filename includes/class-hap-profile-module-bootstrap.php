@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class HAP_Profile_Module_Bootstrap {
 
-	const VERSION_OPTION = 'hap_module_bootstrap_v2';
+	const VERSION_OPTION = 'hap_module_bootstrap_v3';
 
 	/**
 	 * Bootstrap gerekiyorsa çalıştır.
@@ -184,6 +184,73 @@ class HAP_Profile_Module_Bootstrap {
 				'title'           => 'Çin Burcu (Yıl)',
 				'section'         => 'symbolic',
 				'required_fields' => array( 'birth_date' ),
+			),
+			// ── Modül Genişletme Paketi 2 ────────────────────────────────
+			array(
+				'slug'            => 'merkur-burcu-hesaplama',
+				'title'           => 'Merkür Burcu',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'uranus-burcu-hesaplama',
+				'title'           => 'Uranüs Burcu',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'neptun-burcu-hesaplama',
+				'title'           => 'Neptün Burcu',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'pluton-burcu-hesaplama',
+				'title'           => 'Plüton Burcu',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'vedik-burc-hesaplama',
+				'title'           => 'Vedik Burç',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'kuzey-ay-dugumu-hesaplama',
+				'title'           => 'Kuzey Ay Düğümü',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'cin-burcu-dongusu-hesaplama',
+				'title'           => 'Çin Burcu Döngüsü',
+				'section'         => 'symbolic',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'burc-elementi-hesaplama',
+				'title'           => 'Burç Elementi',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'burc-grubu-hesaplama',
+				'title'           => 'Burç Grubu',
+				'section'         => 'astrology',
+				'required_fields' => array( 'birth_date' ),
+			),
+			array(
+				'slug'            => 'aktivite-katsayisi',
+				'title'           => 'Aktivite Katsayısı (PAL)',
+				'section'         => 'health',
+				'required_fields' => array( 'activity_level' ),
+			),
+			array(
+				'slug'            => 'gunluk-kalori-ihtiyaci-hesaplama',
+				'title'           => 'Günlük Kalori İhtiyacı',
+				'section'         => 'health',
+				'required_fields' => array( 'weight', 'height', 'birth_date', 'gender', 'activity_level' ),
 			),
 		);
 	}
