@@ -1868,3 +1868,102 @@
 		font-size: 18px;
 	}
 }
+
+/* ==========================================================================
+   Full-page shell — template_include mode
+   Liberates dashboard from the theme's narrow content area.
+   All rules scoped under .hap-profile-page-shell to avoid leaking.
+   ========================================================================== */
+
+.hap-profile-page-shell {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/* Override app padding/width so it fills the full-width shell */
+.hap-profile-page-shell .hap-profile-app {
+	width: 100%;
+	max-width: none;
+	margin-inline: 0;
+	padding-left: clamp(16px, 4vw, 56px);
+	padding-right: clamp(16px, 4vw, 56px);
+	background:
+		radial-gradient(circle at top left, rgba(255, 90, 95, 0.08), transparent 32%),
+		linear-gradient(180deg, #fbfcfe 0%, #f6f8fb 100%);
+}
+
+/* Dashboard: generous max-width now that we own full viewport width */
+.hap-profile-page-shell .hap-profile-app .hap-dashboard {
+	max-width: 1240px;
+	margin-inline: auto;
+}
+
+/* ── Sidebar grid — reliable at 1180px+ because shell owns full width ─── */
+@media (min-width: 1180px) {
+	.hap-profile-page-shell .hap-profile-app .hap-dashboard {
+		grid-template-columns: 260px minmax(0, 1fr);
+		gap: 28px;
+		align-items: start;
+	}
+
+	.hap-profile-page-shell .hap-profile-app .hap-sidebar {
+		display: block;
+		position: sticky;
+		top: 24px;
+		grid-row: 1 / 99;
+	}
+
+	.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
+		display: none;
+	}
+}
+
+@media (max-width: 1179px) {
+	.hap-profile-page-shell .hap-profile-app .hap-dashboard {
+		grid-template-columns: 1fr;
+	}
+
+	.hap-profile-page-shell .hap-profile-app .hap-sidebar {
+		display: none;
+	}
+
+	.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
+		display: block;
+	}
+}
+
+/* ── Hero: 2-col at ≥900px in full-page context ─────────────────────── */
+@media (min-width: 900px) {
+	.hap-profile-page-shell .hap-profile-app .hap-hero-card {
+		grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.95fr);
+	}
+}
+
+/* ── Fluid result / category grids ──────────────────────────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-featured-results,
+.hap-profile-page-shell .hap-profile-app .hap-results-grid,
+.hap-profile-page-shell .hap-profile-app .hap-analysis-card-grid,
+.hap-profile-page-shell .hap-profile-app .hap-analysis-card-grid--compact {
+	grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+}
+
+/* ── Overflow guards ────────────────────────────────────────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-main-content,
+.hap-profile-page-shell .hap-profile-app .hap-result-card,
+.hap-profile-page-shell .hap-profile-app .hap-analysis-card {
+	min-width: 0;
+	overflow: hidden;
+}
+
+.hap-profile-page-shell .hap-profile-app .hap-result-card h3,
+.hap-profile-page-shell .hap-profile-app .hap-analysis-card h3 {
+	overflow-wrap: anywhere;
+}
+
+/* ── Mobile compact (≤480px) ────────────────────────────────────────── */
+@media (max-width: 480px) {
+	.hap-profile-page-shell .hap-profile-app {
+		padding-left: 12px;
+		padding-right: 12px;
+	}
+}

@@ -45,6 +45,7 @@ class HAP_Profile_Plugin {
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-suite-inspector.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-module-runner.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-results-store.php';
+		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-page-template.php';
 
 		// Yeni modüller
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-suite-module-fields.php';
@@ -75,6 +76,8 @@ class HAP_Profile_Plugin {
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
 		new HAP_Profile_Updater();
+
+		( new HAP_Profile_Page_Template() )->register_hooks();
 
 		$this->auth->register_hooks();
 		add_action( 'template_redirect', array( $this->auth, 'maybe_do_register_redirect' ), 1 );

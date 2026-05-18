@@ -165,6 +165,7 @@ class HAP_Profile_Admin {
 			'premium_dashboard'       => ! empty( $_POST['premium_dashboard'] ) ? 1 : 0,
 			'shareable_profile'       => ! empty( $_POST['shareable_profile'] ) ? 1 : 0,
 			'hide_sensitive_on_share' => ! empty( $_POST['hide_sensitive_on_share'] ) ? 1 : 0,
+			'use_full_page_template'  => ! empty( $_POST['use_full_page_template'] ) ? 1 : 0,
 		);
 		update_option( 'hap_profile_settings', $settings );
 		add_settings_error( 'hap_profile', 'saved', 'Genel ayarlar kaydedildi.', 'updated' );
@@ -316,12 +317,13 @@ class HAP_Profile_Admin {
 		$settings = wp_parse_args(
 			get_option( 'hap_profile_settings', array() ),
 			array(
-				'system_active'           => 1,
-				'profile_page_id'         => 0,
-				'noindex_profiles'        => 1,
-				'premium_dashboard'       => 1,
-				'shareable_profile'       => 1,
-				'hide_sensitive_on_share' => 1,
+				'system_active'          => 1,
+				'profile_page_id'        => 0,
+				'noindex_profiles'       => 1,
+				'premium_dashboard'      => 1,
+				'shareable_profile'      => 1,
+				'hide_sensitive_on_share'=> 1,
+				'use_full_page_template' => 1,
 			)
 		);
 		settings_errors( 'hap_profile' );
@@ -337,6 +339,13 @@ class HAP_Profile_Admin {
 				<tr><th>Premium Dashboard</th><td><label><input type="checkbox" name="premium_dashboard" value="1" <?php checked( ! empty( $settings['premium_dashboard'] ) ); ?>> Aktif</label></td></tr>
 				<tr><th>Paylaşım</th><td><label><input type="checkbox" name="shareable_profile" value="1" <?php checked( ! empty( $settings['shareable_profile'] ) ); ?>> Aktif</label></td></tr>
 				<tr><th>Hassas verileri gizle</th><td><label><input type="checkbox" name="hide_sensitive_on_share" value="1" <?php checked( ! empty( $settings['hide_sensitive_on_share'] ) ); ?>> Aktif</label></td></tr>
+				<tr>
+					<th>Tam genişlik template</th>
+					<td>
+						<label><input type="checkbox" name="use_full_page_template" value="1" <?php checked( ! empty( $settings['use_full_page_template'] ) ); ?>> Aktif</label>
+						<p class="description">Etkinleştirildiğinde /profilim/ sayfası tema content container yerine tam genişlik plugin template ile render edilir.</p>
+					</td>
+				</tr>
 			</table>
 			<?php submit_button( 'Genel ayarları kaydet' ); ?>
 		</form>
