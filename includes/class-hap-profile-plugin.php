@@ -52,10 +52,14 @@ class HAP_Profile_Plugin {
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-consents.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-ai-reports.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-ai-provider.php';
+		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-module-bootstrap.php';
 
 		if ( HAP_Profile_Activator::should_run_migrations() ) {
 			HAP_Profile_Activator::run_migrations();
 		}
+
+		// Yeni calculate_api modüllerini bootstrap et (tek seferlik)
+		add_action( 'admin_init', array( 'HAP_Profile_Module_Bootstrap', 'maybe_run' ) );
 
 		// Suite tablo uyarısı
 		HAP_Suite_Module_Fields::maybe_warn_admin();
