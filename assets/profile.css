@@ -3001,3 +3001,155 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* ==========================================================================
+   Analysis layout hotfix
+   Keep the panel-based IA, but force the main content area to use the
+   available desktop width even inside narrower theme containers.
+   ========================================================================== */
+
+.hap-profile-app #hap-dashboard {
+	width: min(1320px, calc(100vw - 32px));
+	max-width: none;
+	margin-left: 50%;
+	margin-right: 0;
+	transform: translateX(-50%);
+}
+
+.hap-profile-app .hap-analysis-layout {
+	display: grid;
+	grid-template-columns: 280px minmax(0, 1fr);
+	gap: 24px;
+	align-items: start;
+	width: 100%;
+	max-width: 1320px;
+	margin: 0 auto;
+}
+
+.hap-profile-app .hap-analysis-sidebar {
+	width: 280px;
+	min-width: 280px;
+	position: sticky;
+	top: 96px;
+	align-self: start;
+}
+
+.hap-profile-app .hap-analysis-main {
+	min-width: 0;
+	width: 100%;
+	max-width: none;
+	display: block;
+}
+
+.hap-profile-app .hap-analysis-panel {
+	width: 100%;
+	max-width: none;
+	display: none;
+}
+
+.hap-profile-app .hap-analysis-panel.is-active {
+	display: block;
+}
+
+.hap-profile-app .hap-analysis-panel > *,
+.hap-profile-app .hap-analysis-panel-block,
+.hap-profile-app .hap-overview-compact-hero,
+.hap-profile-app .hap-analysis-kpi-grid,
+.hap-profile-app .hap-personal-summary-grid,
+.hap-profile-app .hap-analysis-category-grid,
+.hap-profile-app .hap-featured-results,
+.hap-profile-app .hap-results-grid,
+.hap-profile-app .hap-cat-results-grid {
+	width: 100%;
+	max-width: none;
+}
+
+.hap-profile-app .hap-analysis-panel-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	width: 100%;
+}
+
+.hap-profile-app .hap-analysis-category-grid,
+.hap-profile-app .hap-results-grid,
+.hap-profile-app .hap-cat-results-grid,
+.hap-profile-app .hap-featured-results {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 18px;
+	width: 100%;
+}
+
+.hap-profile-app .hap-result-card,
+.hap-profile-app .hap-result-card--featured,
+.hap-profile-app .hap-analysis-category-card,
+.hap-profile-app .hap-analysis-kpi-card {
+	width: 100%;
+	min-width: 0;
+}
+
+.hap-profile-app .hap-overview-compact-hero {
+	display: grid;
+	grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+	gap: 18px;
+}
+
+.hap-profile-app .hap-analysis-kpi-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+}
+
+@media (max-width: 900px) {
+	.hap-profile-app #hap-dashboard {
+		width: 100%;
+		margin-left: 0;
+		margin-right: 0;
+		transform: none;
+	}
+
+	.hap-profile-app .hap-analysis-layout {
+		display: block;
+		max-width: none;
+	}
+
+	.hap-profile-app .hap-analysis-sidebar {
+		width: 100%;
+		min-width: 0;
+		position: static;
+		margin-bottom: 20px;
+	}
+
+	.hap-profile-app .hap-analysis-nav {
+		display: flex;
+		gap: 10px;
+		overflow-x: auto;
+		padding-bottom: 2px;
+		scrollbar-width: none;
+	}
+
+	.hap-profile-app .hap-analysis-nav::-webkit-scrollbar {
+		display: none;
+	}
+
+	.hap-profile-app .hap-analysis-nav-item {
+		flex: 0 0 auto;
+		min-width: max-content;
+	}
+
+	.hap-profile-app .hap-analysis-panel,
+	.hap-profile-app .hap-analysis-panel.is-active {
+		display: block;
+	}
+
+	.hap-profile-app .hap-overview-compact-hero,
+	.hap-profile-app .hap-analysis-kpi-grid,
+	.hap-profile-app .hap-analysis-category-grid,
+	.hap-profile-app .hap-results-grid,
+	.hap-profile-app .hap-cat-results-grid,
+	.hap-profile-app .hap-featured-results {
+		grid-template-columns: 1fr;
+	}
+}
