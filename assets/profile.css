@@ -2997,8 +2997,8 @@
 		display: flex;
 		gap: 10px;
 		overflow-x: auto;
-		padding: 10px;
-		margin: -10px -10px 14px -10px;
+		padding: 12px 16px;
+		margin: 0 -16px 16px -16px;
 		scrollbar-width: none;
 		position: sticky;
 		top: 0;
@@ -3019,6 +3019,10 @@
 		border: 1px solid var(--hap-border);
 	}
 
+	.hap-profile-app .hap-analysis-panel {
+		padding: 16px 0 0 0;
+	}
+
 	.hap-profile-app .hap-overview-compact-hero {
 		grid-template-columns: 1fr;
 		padding: 24px 20px;
@@ -3026,6 +3030,11 @@
 
 	.hap-profile-app .hap-analysis-kpi-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.hap-profile-app .hap-result-card,
+	.hap-profile-app .hap-analysis-category-card {
+		padding: 16px;
 	}
 }
 
