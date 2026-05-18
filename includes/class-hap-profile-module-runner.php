@@ -20,12 +20,20 @@ class HAP_Profile_Module_Runner {
 		'butce', 'muhasebe', 'kur',
 	);
 
+	// Belirli geçerli profil modüllerinin kelime çakışması nedeniyle filtrelenmesini önler.
+	private static $profile_policy_slug_allowlist = array(
+		'merkur-burcu-hesaplama',
+	);
+
 	// -------------------------------------------------------
 	// Yardımcı metodlar
 	// -------------------------------------------------------
 
 	public static function is_profile_relevant( $module ) {
 		$slug = strtolower( sanitize_title( $module['slug'] ) );
+		if ( in_array( $slug, self::$profile_policy_slug_allowlist, true ) ) {
+			return true;
+		}
 		foreach ( self::$finance_keywords as $kw ) {
 			if ( false !== strpos( $slug, $kw ) ) {
 				return false;
