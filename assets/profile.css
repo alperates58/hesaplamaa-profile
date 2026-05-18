@@ -2376,3 +2376,80 @@
 		grid-template-columns: repeat(2, 1fr) !important;
 	}
 }
+
+/* ==========================================================================
+   Personal summary + result meaning layer
+   ========================================================================== */
+
+/* Kişisel Özet grid */
+.hap-profile-app .hap-personal-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+	gap: 14px;
+}
+
+.hap-profile-app .hap-personal-insight {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	padding: 16px;
+	background: #fff;
+	border: 1px solid var(--hap-border);
+	border-radius: 14px;
+	box-shadow: 0 1px 4px rgba(17, 24, 39, 0.05);
+}
+
+.hap-profile-app .hap-personal-insight-label {
+	font-size: 11px;
+	font-weight: 700;
+	color: var(--hap-text-muted);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.hap-profile-app .hap-personal-insight-value {
+	font-size: 17px;
+	font-weight: 800;
+	color: var(--hap-text-strong);
+	line-height: 1.2;
+}
+
+.hap-profile-app .hap-personal-insight-suffix {
+	font-size: 12px;
+	color: var(--hap-text-muted);
+	line-height: 1.5;
+}
+
+/* Category summary teaser */
+.hap-profile-app .hap-cat-summary-teaser {
+	margin: 0;
+	font-size: 12px;
+	color: var(--hap-text-muted);
+	line-height: 1.5;
+}
+
+/* Result meaning block */
+.hap-profile-app .hap-result-meaning {
+	margin-top: 6px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: #f8fafc;
+	border: 1px solid #e8edf2;
+}
+
+.hap-profile-app .hap-result-meaning-label {
+	display: block;
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--hap-text-muted);
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	margin-bottom: 4px;
+}
+
+.hap-profile-app .hap-result-meaning-text {
+	margin: 0;
+	font-size: 12px;
+	color: #475569;
+	line-height: 1.55;
+}

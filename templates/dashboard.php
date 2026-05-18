@@ -354,6 +354,81 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 		$ai_display_status = 'processing';
 	}
 }
+
+// ── View-layer display helpers — no backend logic, display only ───────────
+
+$cat_teasers = array(
+	'astrology'     => 'Duygusal yönün, aidiyet ihtiyacın ve iç ritmin öne çıkıyor.',
+	'numerology'    => 'Doğum tarihinden gelen sayı temalarını özetledik.',
+	'symbolic'      => 'Tarot, aura ve sembolik göstergeleri tek yerde topladık.',
+	'compatibility' => 'Partner doğum tarihiyle ilişki dinamiğini yorumladık.',
+	'health'        => 'Vücut dengeni, ideal kilo aralığını ve günlük ihtiyaçlarını birlikte yorumladık.',
+	'sport'         => '30 dakikalık egzersiz varsayımıyla aktiviteleri karşılaştırdık.',
+);
+
+$result_explanations = array(
+	'gunes-burcu-hesaplama'                => 'Güneş burcun temel karakter tonunu işaret eder; tema olarak yorumlanabilir, kesin kader değildir.',
+	'burc-dogum-araligi-hesaplama'         => 'Güneş burcunun tarih aralığını gösterir; astrolojik referans bilgisidir.',
+	'burc-dekani-hesaplama'                => 'Burcunun hangi dekan dönemine denk geldiğini gösterir.',
+	'burc-derecesi-hesaplama'              => 'Güneşin burcundaki açısal konumunu işaret eder.',
+	'ay-fazi-hesaplama'                    => 'Doğum anındaki Ay fazını gösterir; sembolik referans olarak yorumlanabilir.',
+	'yasam-yolu-sayisi-hesaplama'          => 'Doğum tarihinden hesaplanan genel numerolojik tema göstergesidir.',
+	'kisisel-yil-sayisi-hesaplama'         => 'Bu yıl için doğum tarihinden türetilen numerolojik döngü sayısıdır.',
+	'dogum-gunu-sayisi-hesaplama'          => 'Doğum gününden elde edilen numerolojik tema göstergesidir.',
+	'cin-burcu-hesaplama'                  => 'Çin takvimindeki doğum yılına karşılık gelen hayvan sembolünü gösterir.',
+	'cin-elementi-hesaplama'               => 'Çin astrolojisindeki elementi gösterir; tema olarak yorumlanabilir.',
+	'aura-rengi-hesaplama'                 => 'Doğum tarihine göre hesaplanan sembolik aura renk göstergesidir.',
+	'dogum-tarot-karti-hesaplama'          => 'Doğum tarihine dayalı numerolojik tarot temasını gösterir; kehanet değildir.',
+	'ask-tarot-karti-hesaplama'            => 'İlişki dinamiğini simgeleyen sembolik tarot temasıdır; kehanet değildir.',
+	'burc-uyumu-hesaplama'                 => 'İki burcun sembolik uyum skorunu gösterir; mutlak öngörü değildir.',
+	'cin-burcuna-gore-ask-uyumu-hesaplama' => 'Çin burcu temalı sembolik uyum göstergesidir.',
+	'dogum-gunu-hesaplayici'               => 'Doğum tarihine göre ilişki teması hesabını gösterir.',
+	'vucut-kitle-indeksi-hesaplama'        => 'Vücut ağırlığı-boy oranını gösterir. Bilgilendirme amaçlıdır; tıbbi teşhis değildir.',
+	'ideal-kilo-hesaplama'                 => 'Yaklaşık referans aralığıdır; kişisel sağlık durumuna göre değişebilir. Bilgilendirme amaçlıdır.',
+	'gunluk-su-ihtiyaci-hesaplama'         => 'Vücut ağırlığına göre tahmini günlük su ihtiyacını gösterir; bireysel koşullara göre değişir.',
+	'spor-protein-ihtiyaci-hesaplama'      => 'Aktivite düzeyine göre tahmini protein ihtiyacını gösterir. Bilgilendirme amaçlıdır.',
+	'adimdan-kaloriye-hesaplama'           => 'Adım sayısına karşılık gelen yaklaşık kalori harcamasını gösterir.',
+	'yuruyus-kalori-yakimi-hesaplama'      => 'Yaklaşık enerji harcamasıdır; tempo ve kişisel kondisyonla değişir.',
+	'kosu-kalori-yakimi-hesaplama'         => 'Yaklaşık enerji harcamasıdır; tempo ve kişisel kondisyonla değişir.',
+	'bisiklet-kalori-yakimi-hesaplama'     => 'Yaklaşık enerji harcamasıdır; tempo ve kişisel kondisyonla değişir.',
+	'yuzme-kalori-yakimi-hesaplama'        => 'Yaklaşık enerji harcamasıdır; stil ve yoğunlukla değişir.',
+	'ip-atlama-kalori-yakimi-hesaplama'    => 'Yaklaşık enerji harcamasıdır; tempo ve kişisel kondisyonla değişir.',
+	'yoga-kalori-yakimi-hesaplama'         => 'Yaklaşık enerji harcamasıdır; stil ve yoğunlukla değişir.',
+	'pilates-kalori-yakimi-hesaplama'      => 'Yaklaşık enerji harcamasıdır; yoğunluk düzeyiyle değişir.',
+	'zumba-kalori-yakimi-hesaplama'        => 'Yaklaşık enerji harcamasıdır; tempo ve kişisel kondisyonla değişir.',
+	'basketbol-kalori-yakimi-hesaplama'    => 'Yaklaşık enerji harcamasıdır; tempo ve kişisel kondisyonla değişir.',
+	'futbol-kalori-yakimi-hesaplama'       => 'Yaklaşık enerji harcamasıdır; tempo ve kişisel kondisyonla değişir.',
+);
+
+$personal_insights  = array();
+$_insight_sources   = array(
+	'gunes-burcu-hesaplama'         => array( 'label' => 'Güneş Burcu', 'suffix' => 'karakterinin duygusal ve sosyal tonunu işaret eder.' ),
+	'yasam-yolu-sayisi-hesaplama'   => array( 'label' => 'Yaşam Yolu Sayısı', 'suffix' => 'doğum tarihinden türetilen numerolojik tema göstergesi.' ),
+	'vucut-kitle-indeksi-hesaplama' => array( 'label' => 'Vücut Kitle İndeksi', 'suffix' => 'bilgilendirme amaçlıdır; tıbbi teşhis değildir.' ),
+	'cin-burcu-hesaplama'           => array( 'label' => 'Çin Burcu', 'suffix' => 'Çin takvimindeki sembolik hayvan göstergesi.' ),
+	'burc-uyumu-hesaplama'          => array( 'label' => 'Burç Uyumu', 'suffix' => 'sembolik uyum göstergesidir; mutlak öngörü değildir.' ),
+	'dogum-tarot-karti-hesaplama'   => array( 'label' => 'Doğum Tarot Kartı', 'suffix' => 'sembolik tema göstergesidir; kehanet değildir.' ),
+);
+foreach ( $_insight_sources as $_i_slug => $_i_def ) {
+	if ( ! isset( $ready_results[ $_i_slug ] ) ) {
+		continue;
+	}
+	$_i_val  = (string) ( $ready_results[ $_i_slug ]['result']['value'] ?? '' );
+	$_i_unit = (string) ( $ready_results[ $_i_slug ]['result']['unit'] ?? '' );
+	$_i_lbl  = (string) ( $ready_results[ $_i_slug ]['result']['label'] ?? '' );
+	if ( '' === $_i_val ) {
+		continue;
+	}
+	$personal_insights[] = array(
+		'label'  => $_i_def['label'],
+		'value'  => $_i_val . ( $_i_unit ? ' ' . $_i_unit : '' ) . ( $_i_lbl ? ' — ' . $_i_lbl : '' ),
+		'suffix' => $_i_def['suffix'],
+	);
+	if ( count( $personal_insights ) >= 4 ) {
+		break;
+	}
+}
+unset( $_insight_sources, $_i_slug, $_i_def, $_i_val, $_i_unit, $_i_lbl );
 ?>
 <div class="hap-profile-app">
 
@@ -525,6 +600,28 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 
 			</section>
 
+			<!-- ── Kişisel Özet ────────────────────────────────────────────── -->
+			<?php if ( ! empty( $personal_insights ) ) : ?>
+				<section class="hap-results-area hap-personal-summary-section">
+					<div class="hap-section-heading">
+						<div>
+							<span class="hap-eyebrow">Senin İçin Hazırlandı</span>
+							<h2 class="hap-section-title">Kişisel Özet</h2>
+							<p class="hap-section-copy">Profil bilgilerine göre öne çıkan deterministic sonuçların kısa özeti.</p>
+						</div>
+					</div>
+					<div class="hap-personal-summary-grid">
+						<?php foreach ( $personal_insights as $_pi ) : ?>
+						<div class="hap-personal-insight">
+							<span class="hap-personal-insight-label"><?php echo esc_html( $_pi['label'] ); ?></span>
+							<strong class="hap-personal-insight-value"><?php echo esc_html( $_pi['value'] ); ?></strong>
+							<span class="hap-personal-insight-suffix"><?php echo esc_html( $_pi['suffix'] ); ?></span>
+						</div>
+						<?php endforeach; ?>
+					</div>
+				</section>
+			<?php endif; ?>
+
 			<!-- ── Öne Çıkan Sonuçlar ───────────────────────────────────────── -->
 			<?php if ( ! empty( $featured_results ) ) : ?>
 				<section id="hap-section-featured" class="hap-results-area hap-featured-area">
@@ -586,6 +683,9 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 							</span>
 						</div>
 						<strong class="hap-cat-summary-label"><?php echo esc_html( $cat['label'] ); ?></strong>
+						<?php if ( ! empty( $cat_teasers[ $cat_key ] ) ) : ?>
+						<p class="hap-cat-summary-teaser"><?php echo esc_html( $cat_teasers[ $cat_key ] ); ?></p>
+						<?php endif; ?>
 						<?php if ( $cat['count'] > 0 ) : ?>
 						<div class="hap-cat-summary-chips">
 							<?php foreach ( array_slice( $cat['ready'], 0, 2 ) as $chip_slug => $chip_item ) : ?>
@@ -623,6 +723,8 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 					</div>
 					<?php if ( 'sport' === $cat_key ) : ?>
 					<p class="hap-cat-note">Kalori değerleri 30 dakika egzersiz varsayımı ile hesaplanmıştır.</p>
+					<?php elseif ( 'health' === $cat_key ) : ?>
+					<p class="hap-cat-note">Bilgilendirme amaçlıdır; tıbbi teşhis veya tedavi önerisi değildir.</p>
 					<?php endif; ?>
 					<div class="hap-cat-results-grid">
 						<?php foreach ( $cat['ready'] as $r_slug => $runner_item ) : ?>
@@ -650,6 +752,12 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 								<?php endif; ?>
 								<?php if ( ! empty( $result['warnings'] ) ) : ?>
 									<p class="hap-result-warning"><?php echo esc_html( reset( $result['warnings'] ) ); ?></p>
+								<?php endif; ?>
+								<?php if ( ! empty( $result_explanations[ $r_slug ] ) ) : ?>
+								<div class="hap-result-meaning">
+									<span class="hap-result-meaning-label">Bu ne anlama geliyor?</span>
+									<p class="hap-result-meaning-text"><?php echo esc_html( $result_explanations[ $r_slug ] ); ?></p>
+								</div>
 								<?php endif; ?>
 							</article>
 						<?php endforeach; ?>
