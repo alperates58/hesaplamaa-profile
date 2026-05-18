@@ -1899,14 +1899,14 @@
 }
 
 /* ==========================================================================
-   Category-based analysis layout
+   Category-based analysis layout — premium polish
    ========================================================================== */
 
-/* 6-card overview grid */
+/* 6-card overview grid — 3 cols desktop, 2 tablet, 1 mobile */
 .hap-profile-app .hap-cat-overview-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-	gap: 14px;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
 }
 
 /* Summary card — clickable link */
@@ -1914,29 +1914,29 @@
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
-	padding: 18px;
+	padding: 16px;
 	background: var(--hap-card-bg);
 	border: 1px solid var(--hap-border);
-	border-radius: var(--hap-radius-md);
-	box-shadow: var(--hap-shadow-soft);
+	border-radius: 16px;
+	box-shadow: 0 1px 4px rgba(17, 24, 39, 0.06), 0 4px 12px rgba(17, 24, 39, 0.04);
 	text-decoration: none;
 	color: inherit;
 	transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 
 .hap-profile-app .hap-cat-summary-card:hover {
-	border-color: #ffc8ca;
-	box-shadow: 0 16px 36px rgba(255, 90, 95, 0.12);
-	transform: translateY(-2px);
+	border-color: #cbd5e1;
+	box-shadow: 0 4px 18px rgba(17, 24, 39, 0.10);
+	transform: translateY(-1px);
 }
 
 .hap-profile-app .hap-cat-summary-card.has-results {
-	border-left: 3px solid #22c55e;
+	/* status communicated via count badge, no colored left border */
 }
 
 .hap-profile-app .hap-cat-summary-card.no-results {
-	opacity: 0.72;
-	background: #f8fafc;
+	opacity: 0.62;
+	background: #f9fafb;
 }
 
 .hap-profile-app .hap-cat-summary-top {
@@ -1947,31 +1947,42 @@
 }
 
 .hap-profile-app .hap-cat-summary-icon {
-	font-size: 26px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 9px;
+	background: #f1f5f9;
+	border: 1px solid #e2e8f0;
+	font-size: 16px;
 	line-height: 1;
+	flex-shrink: 0;
 }
 
 .hap-profile-app .hap-cat-summary-count {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 26px;
-	height: 26px;
+	min-width: 22px;
+	height: 22px;
 	border-radius: 999px;
-	background: var(--hap-border);
-	color: var(--hap-text-muted);
-	font-size: 12px;
-	font-weight: 800;
-	padding: 0 6px;
+	background: #f1f5f9;
+	border: 1px solid #e2e8f0;
+	color: #64748b;
+	font-size: 11px;
+	font-weight: 700;
+	padding: 0 5px;
 }
 
 .hap-profile-app .hap-cat-summary-count.hap-ready {
-	background: var(--hap-success-bg);
-	color: var(--hap-success-text);
+	background: #ecfdf5;
+	border-color: #a7f3d0;
+	color: #059669;
 }
 
 .hap-profile-app .hap-cat-summary-label {
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 700;
 	color: var(--hap-text-strong);
 	line-height: 1.3;
@@ -1980,30 +1991,30 @@
 .hap-profile-app .hap-cat-summary-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: 5px;
 }
 
 .hap-profile-app .hap-cat-chip {
 	display: inline-flex;
 	align-items: center;
 	gap: 3px;
-	padding: 4px 10px;
-	border-radius: 999px;
-	background: linear-gradient(135deg, #f0fdf4, #ecfdf3);
-	border: 1px solid #bbf7d0;
-	color: var(--hap-success-text);
-	font-size: 12px;
-	font-weight: 700;
+	padding: 3px 8px;
+	border-radius: 6px;
+	background: #f1f5f9;
+	border: 1px solid #e2e8f0;
+	color: #334155;
+	font-size: 11px;
+	font-weight: 600;
 }
 
 .hap-profile-app .hap-cat-chip small {
 	font-size: 10px;
-	opacity: 0.8;
+	opacity: 0.75;
 }
 
 .hap-profile-app .hap-cat-summary-empty {
 	margin: 0;
-	font-size: 12px;
+	font-size: 11px;
 	color: var(--hap-text-muted);
 }
 
@@ -2011,8 +2022,8 @@
 .hap-profile-app .hap-cat-detail {
 	background: var(--hap-card-bg);
 	border: 1px solid var(--hap-border);
-	border-radius: var(--hap-radius-lg);
-	box-shadow: var(--hap-shadow-soft);
+	border-radius: 20px;
+	box-shadow: 0 1px 4px rgba(17, 24, 39, 0.05), 0 4px 16px rgba(17, 24, 39, 0.04);
 	padding: 24px;
 	display: grid;
 	gap: 20px;
@@ -2028,11 +2039,12 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 52px;
-	height: 52px;
-	border-radius: 18px;
-	background: rgba(255, 90, 95, 0.07);
-	font-size: 26px;
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	background: #f1f5f9;
+	border: 1px solid #e2e8f0;
+	font-size: 20px;
 	flex: 0 0 auto;
 }
 
@@ -2040,12 +2052,13 @@
 	flex: 1;
 	min-width: 0;
 	display: grid;
-	gap: 6px;
+	gap: 5px;
 }
 
 .hap-profile-app .hap-cat-detail-title {
 	margin: 0;
-	font-size: 20px;
+	font-size: 18px;
+	font-weight: 700;
 	color: var(--hap-text-strong);
 }
 
@@ -2053,20 +2066,38 @@
 	margin: 0;
 	font-size: 13px;
 	color: var(--hap-text-muted);
-	font-style: italic;
 	line-height: 1.55;
 }
 
-/* 3-column result grid inside each category */
+/* Contextual note within a category detail (e.g. 30-min sport assumption) */
+.hap-profile-app .hap-cat-note {
+	margin: 0;
+	font-size: 12px;
+	color: #64748b;
+	padding: 8px 12px;
+	border-radius: 8px;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	line-height: 1.5;
+}
+
+/* Result grid inside each category */
 .hap-profile-app .hap-cat-results-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 	gap: 16px;
 }
 
-@media (max-width: 640px) {
+/* ── Responsive breakpoints ────────────────────────────────────────────── */
+@media (max-width: 900px) {
 	.hap-profile-app .hap-cat-overview-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 480px) {
+	.hap-profile-app .hap-cat-overview-grid {
+		grid-template-columns: 1fr;
 	}
 
 	.hap-profile-app .hap-cat-detail-head {

@@ -571,6 +571,7 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 					<div>
 						<span class="hap-eyebrow">Kişisel Analizler</span>
 						<h2 class="hap-section-title">Kategori Bazlı Analizlerin</h2>
+						<p class="hap-section-copy">Profil bilgilerinden üretilen deterministic sonuçların kategori bazlı özeti.</p>
 					</div>
 				</div>
 
@@ -620,6 +621,9 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 						</div>
 						<span class="hap-status-pill hap-ready"><?php echo absint( $cat['count'] ); ?> sonuç</span>
 					</div>
+					<?php if ( 'sport' === $cat_key ) : ?>
+					<p class="hap-cat-note">Kalori değerleri 30 dakika egzersiz varsayımı ile hesaplanmıştır.</p>
+					<?php endif; ?>
 					<div class="hap-cat-results-grid">
 						<?php foreach ( $cat['ready'] as $r_slug => $runner_item ) : ?>
 							<?php $result = $runner_item['result'] ?? array(); ?>
@@ -643,6 +647,9 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 								<?php if ( ! empty( $result['description'] ) ) : ?>
 									<?php $desc = $result['description']; ?>
 									<p class="hap-result-description"><?php echo esc_html( strlen( $desc ) > 130 ? substr( $desc, 0, 130 ) . '…' : $desc ); ?></p>
+								<?php endif; ?>
+								<?php if ( ! empty( $result['warnings'] ) ) : ?>
+									<p class="hap-result-warning"><?php echo esc_html( reset( $result['warnings'] ) ); ?></p>
 								<?php endif; ?>
 							</article>
 						<?php endforeach; ?>
