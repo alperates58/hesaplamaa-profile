@@ -665,24 +665,26 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 					<span>%<?php echo absint( $minimum_completion ); ?> profil tamamland&#305;</span>
 						</div>
 					</div>
-					<div class="hap-analysis-progress" aria-hidden="true">
-						<div class="hap-analysis-progress-fill" style="width: <?php echo absint( $minimum_completion ); ?>%"></div>
-					</div>
-					<div class="hap-analysis-sidebar-stats">
-						<div>
-							<strong><?php echo esc_html( count( $ready_results ) ); ?></strong>
-					<span>sonu&#231; haz&#305;r</span>
+					<div class="hap-profile-accordion-content">
+						<div class="hap-analysis-progress" aria-hidden="true">
+							<div class="hap-analysis-progress-fill" style="width: <?php echo absint( $minimum_completion ); ?>%"></div>
 						</div>
-						<div>
-							<strong>%<?php echo absint( $analysis_stats['percentage'] ); ?></strong>
-					<span>analiz haz&#305;rl&#305;&#287;&#305;</span>
+						<div class="hap-analysis-sidebar-stats">
+							<div>
+								<strong><?php echo esc_html( count( $ready_results ) ); ?></strong>
+						<span>sonu&#231; haz&#305;r</span>
+							</div>
+							<div>
+								<strong>%<?php echo absint( $analysis_stats['percentage'] ); ?></strong>
+						<span>analiz haz&#305;rl&#305;&#287;&#305;</span>
+							</div>
 						</div>
-					</div>
-					<div class="hap-analysis-sidebar-actions">
-				<a href="<?php echo esc_url( $edit_url ); ?>" class="hap-btn hap-btn-primary hap-btn-full">Profilimi g&#252;ncelle</a>
-						<?php if ( ! empty( $settings['shareable_profile'] ) ) : ?>
-					<button class="hap-btn hap-btn-secondary hap-btn-full" id="hap-open-share-sidebar" type="button">Payla&#351;</button>
-						<?php endif; ?>
+						<div class="hap-analysis-sidebar-actions">
+					<a href="<?php echo esc_url( $edit_url ); ?>" class="hap-btn hap-btn-primary hap-btn-full">Profilimi g&#252;ncelle</a>
+							<?php if ( ! empty( $settings['shareable_profile'] ) ) : ?>
+						<button class="hap-btn hap-btn-secondary hap-btn-full" id="hap-open-share-sidebar" type="button">Payla&#351;</button>
+							<?php endif; ?>
+						</div>
 					</div>
 				</div>
 

@@ -351,7 +351,6 @@
 			sections.forEach(function (el) { observer.observe(el); });
 		}
 
-		// Also wire the sidebar share button to trigger the same share panel
 		$('#hap-open-share-sidebar').on('click', function () {
 			$('#hap-open-share').trigger('click');
 		});
@@ -363,5 +362,13 @@
 		});
 		HAP.init();
 		HAP.initSidebar();
+
+		// Mobile profile card toggle
+		$(document).on('click', '.hap-analysis-profile-head', function() {
+			if ($(window).width() <= 1024) {
+				$(this).toggleClass('is-open');
+				$(this).siblings('.hap-profile-accordion-content').slideToggle(200);
+			}
+		});
 	});
 }(jQuery));

@@ -2994,8 +2994,39 @@
 	}
 
 	.hap-profile-app .hap-analysis-sidebar-card--profile {
-		order: 3;
-		margin-top: 32px;
+		order: 0;
+		margin-top: 0;
+		margin-bottom: 24px;
+	}
+
+	.hap-profile-app .hap-analysis-profile-head {
+		cursor: pointer;
+		position: relative;
+		padding-right: 24px;
+	}
+
+	.hap-profile-app .hap-analysis-profile-head::after {
+		content: "";
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%) rotate(45deg);
+		width: 8px;
+		height: 8px;
+		border-right: 2px solid var(--hap-text-muted);
+		border-bottom: 2px solid var(--hap-text-muted);
+		transition: transform 0.2s ease;
+	}
+
+	.hap-profile-app .hap-analysis-profile-head.is-open::after {
+		transform: translateY(-50%) rotate(-135deg);
+	}
+
+	.hap-profile-app .hap-profile-accordion-content {
+		display: none;
+		margin-top: 20px;
+		border-top: 1px solid var(--hap-border);
+		padding-top: 20px;
 	}
 
 	.hap-profile-app .hap-analysis-main {
@@ -3042,13 +3073,9 @@
 		padding: 16px 0 0 0;
 	}
 
-	.hap-profile-app .hap-overview-compact-hero {
-		grid-template-columns: 1fr;
-		padding: 24px 20px;
-	}
-
+	.hap-profile-app .hap-overview-compact-hero,
 	.hap-profile-app .hap-analysis-kpi-grid {
-		grid-template-columns: 1fr;
+		display: none; /* Redundant on mobile, profile card handles this */
 	}
 
 	.hap-profile-app .hap-result-card,
