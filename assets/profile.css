@@ -2986,26 +2986,45 @@
 
 @media (max-width: 1024px) {
 	.hap-profile-app .hap-analysis-layout {
-		grid-template-columns: 1fr;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.hap-profile-app .hap-analysis-sidebar {
-		position: static;
+		display: contents;
+	}
+
+	.hap-profile-app .hap-analysis-sidebar-card--profile {
+		order: 3;
+		margin-top: 32px;
+	}
+
+	.hap-profile-app .hap-analysis-main {
+		order: 2;
 	}
 
 	.hap-profile-app .hap-analysis-nav {
+		order: 1;
 		display: flex;
-		gap: 10px;
-		overflow-x: auto;
-		padding: 12px 16px;
-		margin: 0 -16px 16px -16px;
-		scrollbar-width: none;
-		position: sticky;
-		top: 0;
-		background: rgba(249, 250, 251, 0.95);
-		backdrop-filter: blur(8px);
-		z-index: 10;
-		border-bottom: 1px solid var(--hap-border);
+		flex-wrap: wrap;
+		gap: 8px;
+		padding: 0 0 16px 0;
+		margin: 0;
+		position: static;
+		background: transparent;
+		border: none;
+	}
+
+	.hap-profile-app .hap-analysis-nav::before {
+		content: "Analiz Kategorileri";
+		width: 100%;
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--hap-text-muted);
+		margin-bottom: 4px;
+		padding-left: 4px;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
 	}
 
 	.hap-profile-app .hap-analysis-nav::-webkit-scrollbar {
@@ -3017,6 +3036,7 @@
 		min-width: max-content;
 		background: #ffffff;
 		border: 1px solid var(--hap-border);
+		border-radius: 12px;
 	}
 
 	.hap-profile-app .hap-analysis-panel {
