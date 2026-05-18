@@ -101,7 +101,12 @@ class HAP_Profile_Module_Runner {
 		$payload = array();
 		foreach ( $input_mapping as $profile_field => $module_param ) {
 			if ( isset( $profile_data[ $profile_field ] ) ) {
+				// Birincil anahtar: modül input adı (Suite'in beklediği)
 				$payload[ $module_param ] = $profile_data[ $profile_field ];
+				// Geriye uyumluluk: profile_field adıyla da ekle (overwrite etme)
+				if ( $module_param !== $profile_field && ! isset( $payload[ $profile_field ] ) ) {
+					$payload[ $profile_field ] = $profile_data[ $profile_field ];
+				}
 			}
 		}
 
@@ -173,6 +178,7 @@ class HAP_Profile_Module_Runner {
 	 * @return array
 	 */
 	public static function run_module_for_user( $module, $user_id, $profile = null ) {
+		// 1. Finans/alakasız modül filtresi
 		if ( ! self::is_profile_relevant( $module ) ) {
 			return array(
 				'module'   => $module,
@@ -184,12 +190,26 @@ class HAP_Profile_Module_Runner {
 			);
 		}
 
+		// 2. result_enabled güvenlik kontrolü
+		if ( isset( $module['result_enabled'] ) && ! (int) $module['result_enabled'] ) {
+			return array(
+				'module'   => $module,
+				'state'    => 'filtered_by_profile_policy',
+				'message'  => self::get_user_message_for_state( 'filtered_by_profile_policy' ),
+				'missing'  => array(),
+				'result'   => null,
+				'tool_url' => null,
+			);
+		}
+
+		// 3. Profil verisi yükle
 		if ( null === $profile ) {
 			$fields_obj = new HAP_Profile_Fields();
 			$ud         = new HAP_Profile_User_Data( $fields_obj );
 			$profile    = $ud->get_user_profile_data( $user_id );
 		}
 
+		// 4. Eksik zorunlu alan kontrolü
 		$missing = self::get_missing_fields( $module, $profile );
 		if ( ! empty( $missing ) ) {
 			return array(
@@ -202,10 +222,34 @@ class HAP_Profile_Module_Runner {
 			);
 		}
 
+		// 5. Payload ve hash
 		$slug    = $module['slug'];
 		$payload = self::build_payload_for_module( $module, $profile );
 		$hash    = md5( serialize( $payload ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
+		// 6. Efektif runner_type belirle
+		$runner_type   = trim( (string) ( $module['runner_type'] ?? '' ) );
+		$runner_status = trim( (string) ( $module['runner_status'] ?? '' ) );
+		$suite_backend = (int) ( $module['suite_backend_supported'] ?? 0 );
+
+		// Boş/none runner_type ama suite_backend=1 ve status=ok → calculate_api olarak dene
+		if ( ( '' === $runner_type || 'none' === $runner_type ) && $suite_backend && 'ok' === $runner_status ) {
+			$runner_type = 'calculate_api';
+		}
+
+		// 7. Saf frontend/bekleyen tipler: filter denemeden hızlı çık
+		if ( in_array( $runner_type, array( 'js_frontend_only', 'frontend_js_only', 'pending_adapter' ), true ) ) {
+			return array(
+				'module'   => $module,
+				'state'    => 'frontend_only',
+				'message'  => self::get_user_message_for_state( 'frontend_only' ),
+				'missing'  => array(),
+				'result'   => null,
+				'tool_url' => self::get_tool_url( $module ),
+			);
+		}
+
+		// 8. Cache kontrolü (sadece backend destekli tipler için)
 		if ( class_exists( 'HAP_Profile_Results_Store' ) ) {
 			$cached = HAP_Profile_Results_Store::get( $user_id, $slug, $hash );
 			if ( null !== $cached && ( ! empty( $cached['success'] ) || 'ready_result' === ( $cached['status'] ?? '' ) ) ) {
@@ -221,9 +265,11 @@ class HAP_Profile_Module_Runner {
 			}
 		}
 
-		if ( has_filter( 'hc_calculate_module' ) ) {
+		// 9. calculate_api → Suite filter (has_filter kontrolü yok: filter kayıtlı değilse null döner)
+		if ( 'calculate_api' === $runner_type ) {
 			try {
 				$api_result = apply_filters( 'hc_calculate_module', null, $slug, $payload );
+
 				if ( is_array( $api_result ) && ! empty( $api_result['success'] ) ) {
 					if ( empty( $api_result['status'] ) ) {
 						$api_result['status'] = 'ready_result';
@@ -232,7 +278,6 @@ class HAP_Profile_Module_Runner {
 					if ( is_string( $store_note ) ) {
 						$api_result['runner_note'] = $store_note;
 					}
-
 					return array(
 						'module'   => $module,
 						'state'    => 'ready_result',
@@ -244,18 +289,16 @@ class HAP_Profile_Module_Runner {
 					);
 				}
 
-				if ( is_array( $api_result ) && isset( $api_result['error_code'] ) ) {
-					$error_code = $api_result['error_code'];
-					if ( 'unsupported_backend_calculation' === $error_code ) {
-						return array(
-							'module'   => $module,
-							'state'    => 'frontend_only',
-							'message'  => self::get_user_message_for_state( 'frontend_only' ),
-							'missing'  => array(),
-							'result'   => null,
-							'tool_url' => self::get_tool_url( $module ),
-						);
-					}
+				if ( is_array( $api_result ) && ! empty( $api_result['error'] ) ) {
+					return array(
+						'module'        => $module,
+						'state'         => 'calculation_error',
+						'message'       => self::get_user_message_for_state( 'runner_error' ),
+						'missing'       => array(),
+						'result'        => null,
+						'error_message' => (string) $api_result['error'],
+						'tool_url'      => self::get_tool_url( $module ),
+					);
 				}
 			} catch ( Exception $e ) {
 				return array(
@@ -267,25 +310,34 @@ class HAP_Profile_Module_Runner {
 					'tool_url' => self::get_tool_url( $module ),
 				);
 			}
+
+			// Filter null döndürdü veya success değil → frontend_only
+			return array(
+				'module'   => $module,
+				'state'    => 'frontend_only',
+				'message'  => self::get_user_message_for_state( 'frontend_only' ),
+				'missing'  => array(),
+				'result'   => null,
+				'tool_url' => self::get_tool_url( $module ),
+			);
 		}
 
-		$capability = self::detect_module_capabilities( $module );
-		if ( 'php_callback' === $capability && ! empty( $module['runner_callback'] ) ) {
+		// 10. php_callback → doğrudan callable çağır
+		if ( 'php_callback' === $runner_type && ! empty( $module['runner_callback'] ) ) {
 			$cb = $module['runner_callback'];
 			if ( is_callable( $cb ) ) {
 				try {
 					$raw = call_user_func( $cb, $payload );
 					if ( ! empty( $raw ) ) {
-						$normalized                 = self::normalize_result( $module, $raw );
-						$stored_value               = $normalized;
-						$stored_value['status']     = 'ready_result';
-						$stored_value['raw_result'] = $raw;
+						$normalized                      = self::normalize_result( $module, $raw );
+						$stored_value                    = $normalized;
+						$stored_value['status']          = 'ready_result';
+						$stored_value['raw_result']      = $raw;
 						$stored_value['normalized_result'] = $normalized;
-						$store_note                 = self::persist_result( $user_id, $slug, $hash, $stored_value, $module );
+						$store_note                      = self::persist_result( $user_id, $slug, $hash, $stored_value, $module );
 						if ( is_string( $store_note ) ) {
 							$normalized['runner_note'] = $store_note;
 						}
-
 						return array(
 							'module'   => $module,
 							'state'    => 'ready_result',
@@ -306,8 +358,47 @@ class HAP_Profile_Module_Runner {
 					);
 				}
 			}
+			// Callback callable değil → Suite filter fallback
 		}
 
+		// 11. Fallback: Suite filter (php_callback/shortcode_render/bilinmeyen tipler için)
+		if ( has_filter( 'hc_calculate_module' ) ) {
+			try {
+				$api_result = apply_filters( 'hc_calculate_module', null, $slug, $payload );
+				if ( is_array( $api_result ) && ! empty( $api_result['success'] ) ) {
+					if ( empty( $api_result['status'] ) ) {
+						$api_result['status'] = 'ready_result';
+					}
+					$store_note = self::persist_result( $user_id, $slug, $hash, $api_result, $module );
+					if ( is_string( $store_note ) ) {
+						$api_result['runner_note'] = $store_note;
+					}
+					return array(
+						'module'   => $module,
+						'state'    => 'ready_result',
+						'message'  => self::get_user_message_for_state( 'ready_result' ),
+						'missing'  => array(),
+						'result'   => $api_result,
+						'tool_url' => self::get_tool_url( $module ),
+						'cached'   => false,
+					);
+				}
+				if ( is_array( $api_result ) && isset( $api_result['error_code'] ) && 'unsupported_backend_calculation' === $api_result['error_code'] ) {
+					// Desteklenmiyor → frontend_only'e düş
+				}
+			} catch ( Exception $e ) {
+				return array(
+					'module'   => $module,
+					'state'    => 'runner_error',
+					'message'  => self::get_user_message_for_state( 'runner_error' ),
+					'missing'  => array(),
+					'result'   => null,
+					'tool_url' => self::get_tool_url( $module ),
+				);
+			}
+		}
+
+		// 12. Son çare: frontend_only
 		return array(
 			'module'   => $module,
 			'state'    => 'frontend_only',
