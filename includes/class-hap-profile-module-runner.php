@@ -89,7 +89,32 @@ class HAP_Profile_Module_Runner {
 		return 'js_frontend_only';
 	}
 
+	/**
+	 * Modül için Suite adaptörünün beklediği payload'ı oluşturur.
+	 *
+	 * Strateji:
+	 * 1. Tüm aktif profil alanlarını base olarak ekle (boş/null hariç, "0" korunur)
+	 * 2. input_mapping üzerinden module_input_name → value ekle
+	 * 3. required_fields'i garanti ekle
+	 * 4. Modül bazlı alias/fallback uygula
+	 * 5. gender normalize et
+	 */
 	public static function build_payload_for_module( $module, $profile_data ) {
+		$slug    = $module['slug'] ?? '';
+		$payload = array();
+
+		// 1. Tüm profil alanlarını base olarak ekle
+		if ( is_array( $profile_data ) ) {
+			foreach ( $profile_data as $field_key => $value ) {
+				// Boş string/null atla, ama "0" ve 0 kalsın
+				if ( null === $value || '' === (string) $value ) {
+					continue;
+				}
+				$payload[ $field_key ] = $value;
+			}
+		}
+
+		// 2. input_mapping: profile_field → module_input_name
 		$input_mapping = array();
 		if ( ! empty( $module['input_mapping'] ) ) {
 			$decoded = json_decode( $module['input_mapping'], true );
@@ -97,26 +122,113 @@ class HAP_Profile_Module_Runner {
 				$input_mapping = $decoded;
 			}
 		}
-
-		$payload = array();
 		foreach ( $input_mapping as $profile_field => $module_param ) {
-			if ( isset( $profile_data[ $profile_field ] ) ) {
-				// Birincil anahtar: modül input adı (Suite'in beklediği)
-				$payload[ $module_param ] = $profile_data[ $profile_field ];
-				// Geriye uyumluluk: profile_field adıyla da ekle (overwrite etme)
-				if ( $module_param !== $profile_field && ! isset( $payload[ $profile_field ] ) ) {
-					$payload[ $profile_field ] = $profile_data[ $profile_field ];
-				}
+			$value = $profile_data[ $profile_field ] ?? null;
+			if ( null !== $value && '' !== (string) $value ) {
+				$payload[ $module_param ]   = $value;
+				$payload[ $profile_field ]  = $value;
 			}
 		}
 
-		if ( empty( $payload ) ) {
-			$required = json_decode( $module['required_fields'] ?? '[]', true ) ?: array();
-			foreach ( $required as $field ) {
-				if ( isset( $profile_data[ $field ] ) ) {
-					$payload[ $field ] = $profile_data[ $field ];
-				}
+		// 3. required_fields'i garanti ekle
+		$required = json_decode( $module['required_fields'] ?? '[]', true ) ?: array();
+		foreach ( $required as $field ) {
+			$field = trim( (string) $field );
+			if ( '' === $field ) {
+				continue;
 			}
+			$value = $profile_data[ $field ] ?? null;
+			if ( null !== $value && '' !== (string) $value && ! isset( $payload[ $field ] ) ) {
+				$payload[ $field ] = $value;
+			}
+		}
+
+		// 4. gender normalizasyonu
+		if ( isset( $payload['gender'] ) ) {
+			$g = strtolower( trim( (string) $payload['gender'] ) );
+			if ( in_array( $g, array( 'erkek', 'male', 'm', 'man' ), true ) ) {
+				$payload['gender'] = 'male';
+			} elseif ( in_array( $g, array( 'kadın', 'kadin', 'female', 'f', 'woman' ), true ) ) {
+				$payload['gender'] = 'female';
+			}
+		}
+
+		// 5. Modül bazlı alias / required fallback
+		$payload = self::apply_module_aliases( $slug, $payload, $profile_data );
+
+		return $payload;
+	}
+
+	/**
+	 * Modül slug'ına özel alias ve fallback değerler ekler.
+	 */
+	private static function apply_module_aliases( $slug, array $payload, array $profile_data ) {
+		switch ( $slug ) {
+
+			case 'gunluk-su-ihtiyaci-hesaplama':
+				// Zorunlu alanlar
+				if ( ! isset( $payload['weight'] ) && isset( $profile_data['weight'] ) ) {
+					$payload['weight'] = $profile_data['weight'];
+				}
+				if ( ! isset( $payload['activity_level'] ) && isset( $profile_data['activity_level'] ) ) {
+					$payload['activity_level'] = $profile_data['activity_level'];
+				}
+				// Adaptör alias'ları
+				if ( isset( $payload['weight'] ) ) {
+					$payload['hc_gsi_kilo'] = $payload['weight'];
+				}
+				$payload['hc_gsi_durum'] = $profile_data['special_condition'] ?? 'normal';
+				$payload['hc_gsi_hava']  = $profile_data['weather_condition'] ?? 'normal';
+				break;
+
+			case 'ideal-kilo-hesaplama':
+				if ( ! isset( $payload['height'] ) && isset( $profile_data['height'] ) ) {
+					$payload['height'] = $profile_data['height'];
+				}
+				if ( ! isset( $payload['gender'] ) && isset( $profile_data['gender'] ) ) {
+					$payload['gender'] = $profile_data['gender'];
+				}
+				if ( ! isset( $payload['weight'] ) && isset( $profile_data['weight'] ) ) {
+					$payload['weight'] = $profile_data['weight'];
+				}
+				// gender normalize (profile_data'dan gelmişse yeniden normalize et)
+				if ( isset( $payload['gender'] ) ) {
+					$g = strtolower( trim( (string) $payload['gender'] ) );
+					if ( in_array( $g, array( 'erkek', 'male', 'm', 'man' ), true ) ) {
+						$payload['gender'] = 'male';
+					} elseif ( in_array( $g, array( 'kadın', 'kadin', 'female', 'f', 'woman' ), true ) ) {
+						$payload['gender'] = 'female';
+					}
+				}
+				break;
+
+			case 'ay-fazi-hesaplama':
+				if ( ! isset( $payload['birth_date'] ) && isset( $profile_data['birth_date'] ) ) {
+					$payload['birth_date'] = $profile_data['birth_date'];
+				}
+				if ( isset( $payload['birth_date'] ) ) {
+					$payload['hc_ay_date_alt'] = $payload['birth_date'];
+				}
+				break;
+
+			case 'gunluk-adim-hedefi-hesaplama':
+				if ( ! isset( $payload['birth_date'] ) && isset( $profile_data['birth_date'] ) ) {
+					$payload['birth_date'] = $profile_data['birth_date'];
+				}
+				if ( ! isset( $payload['activity_level'] ) && isset( $profile_data['activity_level'] ) ) {
+					$payload['activity_level'] = $profile_data['activity_level'];
+				}
+				if ( ! isset( $payload['weight'] ) && isset( $profile_data['weight'] ) ) {
+					$payload['weight'] = $profile_data['weight'];
+				}
+				break;
+
+			case 'burc-grubu-hesaplama':
+			case 'burc-polaritesi-hesaplama':
+				if ( ! isset( $payload['birth_date'] ) && isset( $profile_data['birth_date'] ) ) {
+					$payload['birth_date'] = $profile_data['birth_date'];
+				}
+				break;
 		}
 
 		return $payload;
