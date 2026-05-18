@@ -1368,8 +1368,7 @@
 	color: var(--hap-cta);
 }
 .hap-profile-app .hap-results-collapsible[open] .hap-results-collapsible-summary {
-	color: var(--hap-cta);
-	border-color: rgba(255, 90, 95, 0.4);
+	display: none;
 }
 .hap-profile-app .hap-cat-results-grid--extra {
 	margin-top: 12px;
