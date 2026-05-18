@@ -443,6 +443,198 @@ class HAP_Profile_Modules {
 		return $report;
 	}
 
+	/**
+	 * Suite tablosundaki backend_supported=1 modüllerini wp_hap_profile_modules'a güvenli biçimde içe aktarır.
+	 *
+	 * Mevcut kayıtlara dokunmaz — sadece eksik slugları INSERT eder.
+	 *
+	 * @param array $args {
+	 *     @type bool     $dry_run                 Varsayılan true. false verilmeden yazma gerçekleşmez.
+	 *     @type string[] $statuses                Suite'te beklenen suggested_profile_status değerleri.
+	 *     @type bool     $include_tool_only        Varsayılan false.
+	 *     @type bool     $include_disabled         Varsayılan false.
+	 *     @type string[] $section_allowlist        İzin verilen section değerleri.
+	 *     @type string[] $slug_allowlist           Belirli slug'larla kısıtlamak için opsiyonel liste.
+	 *     @type string   $default_profile_status   Yeni kayıtlar için varsayılan profile_status.
+	 * }
+	 * @return array Rapor dizisi.
+	 */
+	public static function import_backend_supported_suite_modules( $args = array() ) {
+		global $wpdb;
+
+		$defaults = array(
+			'dry_run'                => true,
+			'statuses'               => array( 'profile_core', 'profile_optional' ),
+			'include_tool_only'      => false,
+			'include_disabled'       => false,
+			'section_allowlist'      => array( 'astrology', 'moon_sky', 'health_lifestyle', 'sport_activity', 'numerology', 'compatibility', 'symbolic_profile' ),
+			'slug_allowlist'         => array(),
+			'default_profile_status' => 'profile_optional',
+		);
+		$args = wp_parse_args( $args, $defaults );
+
+		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
+			return array( 'error' => 'Suite tablosu bulunamadı.' );
+		}
+
+		$suite_table   = $wpdb->prefix . HAP_Suite_Module_Fields::SUITE_TABLE;
+		$modules_table = $wpdb->prefix . HAP_TABLE_MODULES;
+
+		// Statuses listesi hazırla
+		$statuses = array_values( array_unique( (array) $args['statuses'] ) );
+		if ( $args['include_tool_only'] ) {
+			$statuses[] = 'tool_only';
+		}
+		if ( $args['include_disabled'] ) {
+			$statuses[] = 'disabled';
+		}
+		$statuses = array_values( array_unique( $statuses ) );
+
+		$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+
+		// Suite'ten backend_supported=1 adayları çek
+		$candidates = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DISTINCT module_slug, module_title, section, suggested_profile_status
+				 FROM `{$suite_table}`
+				 WHERE backend_supported = 1
+				   AND suggested_profile_status IN ({$placeholders})
+				 ORDER BY module_slug", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				$statuses
+			),
+			ARRAY_A
+		);
+
+		// Profil tablosunda mevcut slug'ları al (flip ile O(1) lookup)
+		$existing_slugs = array_flip(
+			(array) $wpdb->get_col( "SELECT slug FROM `{$modules_table}`" ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+
+		$section_allowlist = ! empty( $args['section_allowlist'] ) ? array_flip( (array) $args['section_allowlist'] ) : array();
+		$slug_allowlist    = ! empty( $args['slug_allowlist'] ) ? array_flip( (array) $args['slug_allowlist'] ) : array();
+
+		$report = array(
+			'dry_run'           => (bool) $args['dry_run'],
+			'candidates'        => count( (array) $candidates ),
+			'inserted'          => 0,
+			'skipped_existing'  => 0,
+			'skipped_status'    => 0,
+			'skipped_section'   => 0,
+			'skipped_no_fields' => 0,
+			'details'           => array(),
+		);
+
+		$now = current_time( 'mysql' );
+
+		foreach ( (array) $candidates as $row ) {
+			$slug    = sanitize_key( $row['module_slug'] );
+			$section = (string) ( $row['section'] ?? '' );
+			$status  = (string) ( $row['suggested_profile_status'] ?? '' );
+
+			if ( '' === $slug ) {
+				continue;
+			}
+
+			// slug_allowlist varsa yalnızca listedekiler
+			if ( ! empty( $slug_allowlist ) && ! isset( $slug_allowlist[ $slug ] ) ) {
+				continue;
+			}
+
+			// Section filtresi
+			if ( ! empty( $section_allowlist ) && ! isset( $section_allowlist[ $section ] ) ) {
+				$report['skipped_section']++;
+				$report['details'][] = array( 'slug' => $slug, 'action' => 'skipped_section', 'section' => $section );
+				continue;
+			}
+
+			// Mevcut kayıt varsa dokunma
+			if ( isset( $existing_slugs[ $slug ] ) ) {
+				$report['skipped_existing']++;
+				$report['details'][] = array( 'slug' => $slug, 'action' => 'skipped_existing' );
+				continue;
+			}
+
+			// Manifest al (required_fields + input_mapping; hc_* zaten filtrelenmiş)
+			$manifest = HAP_Suite_Module_Fields::get_module_manifest( $slug );
+
+			if ( ! $manifest ) {
+				$report['skipped_no_fields']++;
+				$report['details'][] = array( 'slug' => $slug, 'action' => 'skipped_no_manifest' );
+				continue;
+			}
+
+			$required_fields = (array) ( $manifest['required_fields'] ?? array() );
+
+			// input_mapping: hc_* anahtarlarını da filtrele
+			$input_mapping = array_filter(
+				(array) ( $manifest['input_mapping'] ?? array() ),
+				static function ( $key ) {
+					return 0 !== strpos( (string) $key, 'hc_' );
+				},
+				ARRAY_FILTER_USE_KEY
+			);
+
+			if ( empty( $required_fields ) && empty( $input_mapping ) ) {
+				$report['skipped_no_fields']++;
+				$report['details'][] = array( 'slug' => $slug, 'action' => 'skipped_no_fields' );
+				continue;
+			}
+
+			$profile_status = ( 'profile_core' === $status ) ? 'profile_core' : $args['default_profile_status'];
+
+			$required_fields_json = wp_json_encode( array_values( array_unique( $required_fields ) ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+			$input_mapping_json   = wp_json_encode( $input_mapping, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+
+			$report['inserted']++;
+			$report['details'][] = array(
+				'slug'            => $slug,
+				'action'          => $args['dry_run'] ? 'would_insert' : 'inserted',
+				'title'           => $manifest['module_title'],
+				'section'         => $section,
+				'profile_status'  => $profile_status,
+				'required_fields' => $required_fields,
+				'input_mapping'   => $input_mapping,
+			);
+
+			if ( ! $args['dry_run'] ) {
+				$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$modules_table,
+					array(
+						'slug'                      => $slug,
+						'title'                     => sanitize_text_field( (string) ( $manifest['module_title'] ?? $slug ) ),
+						'shortcode'                 => '',
+						'section'                   => sanitize_key( $section ),
+						'profile_status'            => $profile_status,
+						'result_enabled'            => 1,
+						'onboarding_prompt_enabled' => 1,
+						'ai_include'                => 1,
+						'ai_enabled'                => 0,
+						'runner_type'               => 'calculate_api',
+						'runner_status'             => 'ok',
+						'suite_backend_supported'   => 1,
+						'suite_source'              => 'hc_module_fields',
+						'suite_last_synced_at'      => $now,
+						'suite_section'             => sanitize_key( $section ),
+						'required_fields'           => $required_fields_json,
+						'input_mapping'             => $input_mapping_json,
+						'suite_required_fields'     => $required_fields_json,
+						'suite_input_mapping'       => $input_mapping_json,
+						'source'                    => 'suite_import',
+						'availability_status'       => 'active',
+						'missing_fields_behavior'   => 'show_prompt',
+						'sort_order'                => 0,
+						'share_include_default'     => 0,
+						'notes'                     => '',
+						'created_at'                => $now,
+						'updated_at'                => $now,
+					)
+				);
+			}
+		}
+
+		return $report;
+	}
+
 	private function build_formats_for_row( array $row ) {
 		$formats = array();
 		foreach ( $row as $key => $value ) {
