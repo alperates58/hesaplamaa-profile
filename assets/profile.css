@@ -1969,48 +1969,63 @@
 }
 
 /* ==========================================================================
-   v4 UI Stabilisation
-   Overrides earlier rules that were fighting with the theme.
-   All scoped under .hap-profile-page-shell to avoid bleed.
+   v4 UI Stabilisation — final
+   Selectors deliberately target BOTH .hap-profile-page-shell scope
+   AND plain .hap-profile-app scope so rules work with or without the
+   full-page-template wrapper.
    ========================================================================== */
 
-/* ── Sidebar: force-hide below 1180px, force-show above ──────────────────── */
-@media (max-width: 1179px) {
-	.hap-profile-page-shell .hap-profile-app .hap-sidebar {
-		display: none !important;
-	}
-	.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
-		display: block !important;
-	}
-}
-
+/* ── 1. Desktop (≥1180px): hide subnav, show sidebar ─────────────────────── */
 @media (min-width: 1180px) {
-	.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
+	/* Double-target: shell scope + plain app scope */
+	.hap-profile-page-shell .hap-mobile-subnav,
+	.hap-profile-app .hap-mobile-subnav {
 		display: none !important;
 	}
-	.hap-profile-page-shell .hap-profile-app .hap-sidebar {
+
+	.hap-profile-page-shell .hap-sidebar {
 		display: block !important;
 		position: sticky;
 		top: 96px;
-		grid-row: 1 / 99;
+		width: 260px;
 		align-self: start;
+	}
+
+	/* Dashboard grid: sidebar left | main right */
+	.hap-profile-page-shell .hap-dashboard {
+		grid-template-columns: 260px minmax(0, 1fr) !important;
+		gap: 28px;
+		align-items: start;
 	}
 }
 
-/* ── Mobile subnav chip styling (visible ≤1179px) ────────────────────────── */
-.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
+/* ── 2. Mobile/tablet (≤1179px): hide sidebar, show subnav ───────────────── */
+@media (max-width: 1179px) {
+	.hap-profile-page-shell .hap-sidebar,
+	.hap-profile-app .hap-sidebar {
+		display: none !important;
+	}
+
+	.hap-profile-page-shell .hap-mobile-subnav {
+		display: flex !important;
+	}
+}
+
+/* ── 3. Mobile subnav: chip-style links ───────────────────────────────────── */
+.hap-profile-app .hap-mobile-subnav {
 	position: sticky;
 	top: 0;
 	z-index: 110;
 	background: rgba(255, 255, 255, 0.97);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
-	border-bottom: 1px solid var(--hap-border, #e8edf2);
+	border-bottom: 1px solid #e8edf2;
 	margin-bottom: 20px;
 }
 
-.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav-inner {
+.hap-profile-app .hap-mobile-subnav-inner {
 	display: flex !important;
+	flex-wrap: nowrap;
 	gap: 6px;
 	overflow-x: auto;
 	scrollbar-width: none;
@@ -2018,43 +2033,58 @@
 	-webkit-overflow-scrolling: touch;
 }
 
-.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav-inner::-webkit-scrollbar {
+.hap-profile-app .hap-mobile-subnav-inner::-webkit-scrollbar {
 	display: none;
 }
 
-.hap-profile-page-shell .hap-profile-app .hap-mobile-nav-link {
+.hap-profile-app .hap-mobile-nav-link {
 	display: inline-flex !important;
+	align-items: center;
 	flex-shrink: 0;
 	padding: 7px 16px;
 	border-radius: 999px;
 	font-size: 13px;
 	font-weight: 500;
-	color: var(--hap-text-muted, #64748b);
+	color: #64748b;
 	text-decoration: none !important;
-	border: 1px solid var(--hap-border, #e8edf2);
-	background: var(--hap-card-bg, #fff);
+	border: 1px solid #e8edf2;
+	background: #ffffff;
 	white-space: nowrap;
 	transition: background 0.15s, color 0.15s, border-color 0.15s;
+	line-height: 1;
 }
 
-.hap-profile-page-shell .hap-profile-app .hap-mobile-nav-link:hover,
-.hap-profile-page-shell .hap-profile-app .hap-mobile-nav-link.is-active {
+.hap-profile-app .hap-mobile-nav-link:hover,
+.hap-profile-app .hap-mobile-nav-link.is-active {
 	background: rgba(255, 90, 95, 0.08) !important;
-	color: var(--hap-cta, #ff5a5f) !important;
+	color: #ff5a5f !important;
 	border-color: rgba(255, 90, 95, 0.25) !important;
 	font-weight: 600;
 }
 
-/* ── Hero card: flex column so child order is deterministic ──────────────── */
-.hap-profile-page-shell .hap-profile-app .hap-hero-card {
-	display: flex !important;
+/* ── 4. Sidebar card visual ───────────────────────────────────────────────── */
+.hap-profile-app .hap-sidebar-inner {
+	display: flex;
 	flex-direction: column;
+	gap: 8px;
+	background: #ffffff;
+	border: 1px solid #e8edf2;
+	border-radius: 16px;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+	padding: 20px 16px 16px;
+	overflow: hidden;
+}
+
+/* ── 5. Hero card: flex column (no grid ambiguity) ────────────────────────── */
+.hap-profile-app .hap-hero-card {
+	display: flex !important;
+	flex-direction: column !important;
 	gap: 28px;
 	padding: 32px;
 }
 
-/* ── Hero top: user info left + progress right ───────────────────────────── */
-.hap-profile-page-shell .hap-profile-app .hap-hero-top {
+/* ── 6. Hero top: user left | progress right ──────────────────────────────── */
+.hap-profile-app .hap-hero-top {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
 	gap: 28px;
@@ -2062,46 +2092,76 @@
 }
 
 @media (max-width: 900px) {
-	.hap-profile-page-shell .hap-profile-app .hap-hero-top {
+	.hap-profile-app .hap-hero-top {
 		grid-template-columns: 1fr;
 	}
 }
 
-/* ── Stat chips row at hero bottom ───────────────────────────────────────── */
-.hap-profile-page-shell .hap-profile-app .hap-hero-stats {
-	display: grid;
+/* ── 7. Hero stat chips at bottom ─────────────────────────────────────────── */
+.hap-profile-app .hap-hero-stats {
+	display: grid !important;
 	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 	gap: 12px;
 	padding-top: 20px;
-	border-top: 1px solid var(--hap-border, #e8edf2);
+	border-top: 1px solid #e8edf2;
 }
 
-/* Chips inside .hap-hero-stats inherit from existing .hap-stat-chip rules */
-.hap-profile-page-shell .hap-profile-app .hap-hero-stats .hap-stat-chip {
-	padding: 14px 18px;
+.hap-profile-app .hap-hero-stats .hap-stat-chip {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 16px 20px;
+	border-radius: 14px;
+	background: #f8fafc;
+	border: 1px solid #e8edf2;
 }
 
-/* ── Progress bar overflow guard ─────────────────────────────────────────── */
-.hap-profile-page-shell .hap-profile-app .hap-progress-bar {
+.hap-profile-app .hap-hero-stats .hap-stat-chip--green {
+	background: #f0fdf4;
+	border-color: #a7f3d0;
+}
+
+.hap-profile-app .hap-hero-stats .hap-stat-chip--warn {
+	background: #fff7ed;
+	border-color: #fed7aa;
+}
+
+.hap-profile-app .hap-hero-stats .hap-stat-chip-value {
+	font-size: 24px;
+	font-weight: 800;
+	line-height: 1;
+	color: #1e293b;
+}
+
+.hap-profile-app .hap-hero-stats .hap-stat-chip--green .hap-stat-chip-value {
+	color: #059669;
+}
+
+.hap-profile-app .hap-hero-stats .hap-stat-chip--warn .hap-stat-chip-value {
+	color: #d97706;
+}
+
+.hap-profile-app .hap-hero-stats .hap-stat-chip-label {
+	font-size: 12px;
+	color: #64748b;
+	text-align: center;
+	white-space: nowrap;
+}
+
+/* ── 8. Progress bar overflow guard ──────────────────────────────────────── */
+.hap-profile-app .hap-progress-bar {
 	overflow: hidden;
 	max-width: 100%;
+	box-sizing: border-box;
 }
 
-/* ── Sidebar card visual ─────────────────────────────────────────────────── */
-.hap-profile-page-shell .hap-profile-app .hap-sidebar-inner {
-	border-radius: var(--hap-radius-md, 16px);
-	background: var(--hap-card-bg, #fff);
-	border: 1px solid var(--hap-border, #e8edf2);
-	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-	padding: 20px 16px 16px;
-}
-
-/* ── Mobile compact ≤480px ───────────────────────────────────────────────── */
+/* ── 9. Mobile compact ≤480px ────────────────────────────────────────────── */
 @media (max-width: 480px) {
-	.hap-profile-page-shell .hap-profile-app .hap-hero-card {
-		padding: 20px 16px;
+	.hap-profile-app .hap-hero-card {
+		padding: 20px 16px !important;
 	}
-	.hap-profile-page-shell .hap-profile-app .hap-hero-stats {
-		grid-template-columns: repeat(2, 1fr);
+	.hap-profile-app .hap-hero-stats {
+		grid-template-columns: repeat(2, 1fr) !important;
 	}
 }
