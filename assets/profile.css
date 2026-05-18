@@ -1898,6 +1898,186 @@
 	margin-inline: auto;
 }
 
+/* ==========================================================================
+   Category-based analysis layout
+   ========================================================================== */
+
+/* 6-card overview grid */
+.hap-profile-app .hap-cat-overview-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+	gap: 14px;
+}
+
+/* Summary card — clickable link */
+.hap-profile-app .hap-cat-summary-card {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 18px;
+	background: var(--hap-card-bg);
+	border: 1px solid var(--hap-border);
+	border-radius: var(--hap-radius-md);
+	box-shadow: var(--hap-shadow-soft);
+	text-decoration: none;
+	color: inherit;
+	transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.hap-profile-app .hap-cat-summary-card:hover {
+	border-color: #ffc8ca;
+	box-shadow: 0 16px 36px rgba(255, 90, 95, 0.12);
+	transform: translateY(-2px);
+}
+
+.hap-profile-app .hap-cat-summary-card.has-results {
+	border-left: 3px solid #22c55e;
+}
+
+.hap-profile-app .hap-cat-summary-card.no-results {
+	opacity: 0.72;
+	background: #f8fafc;
+}
+
+.hap-profile-app .hap-cat-summary-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.hap-profile-app .hap-cat-summary-icon {
+	font-size: 26px;
+	line-height: 1;
+}
+
+.hap-profile-app .hap-cat-summary-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 26px;
+	height: 26px;
+	border-radius: 999px;
+	background: var(--hap-border);
+	color: var(--hap-text-muted);
+	font-size: 12px;
+	font-weight: 800;
+	padding: 0 6px;
+}
+
+.hap-profile-app .hap-cat-summary-count.hap-ready {
+	background: var(--hap-success-bg);
+	color: var(--hap-success-text);
+}
+
+.hap-profile-app .hap-cat-summary-label {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--hap-text-strong);
+	line-height: 1.3;
+}
+
+.hap-profile-app .hap-cat-summary-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.hap-profile-app .hap-cat-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, #f0fdf4, #ecfdf3);
+	border: 1px solid #bbf7d0;
+	color: var(--hap-success-text);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.hap-profile-app .hap-cat-chip small {
+	font-size: 10px;
+	opacity: 0.8;
+}
+
+.hap-profile-app .hap-cat-summary-empty {
+	margin: 0;
+	font-size: 12px;
+	color: var(--hap-text-muted);
+}
+
+/* Category detail section */
+.hap-profile-app .hap-cat-detail {
+	background: var(--hap-card-bg);
+	border: 1px solid var(--hap-border);
+	border-radius: var(--hap-radius-lg);
+	box-shadow: var(--hap-shadow-soft);
+	padding: 24px;
+	display: grid;
+	gap: 20px;
+}
+
+.hap-profile-app .hap-cat-detail-head {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+}
+
+.hap-profile-app .hap-cat-detail-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	border-radius: 18px;
+	background: rgba(255, 90, 95, 0.07);
+	font-size: 26px;
+	flex: 0 0 auto;
+}
+
+.hap-profile-app .hap-cat-detail-title-wrap {
+	flex: 1;
+	min-width: 0;
+	display: grid;
+	gap: 6px;
+}
+
+.hap-profile-app .hap-cat-detail-title {
+	margin: 0;
+	font-size: 20px;
+	color: var(--hap-text-strong);
+}
+
+.hap-profile-app .hap-cat-insight {
+	margin: 0;
+	font-size: 13px;
+	color: var(--hap-text-muted);
+	font-style: italic;
+	line-height: 1.55;
+}
+
+/* 3-column result grid inside each category */
+.hap-profile-app .hap-cat-results-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+	gap: 16px;
+}
+
+@media (max-width: 640px) {
+	.hap-profile-app .hap-cat-overview-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.hap-profile-app .hap-cat-detail-head {
+		flex-wrap: wrap;
+	}
+
+	.hap-profile-app .hap-cat-results-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
 /* ── Sidebar grid — reliable at 1180px+ because shell owns full width ─── */
 @media (min-width: 1180px) {
 	.hap-profile-page-shell .hap-profile-app .hap-dashboard {

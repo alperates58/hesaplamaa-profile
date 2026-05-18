@@ -37,28 +37,16 @@ $runner_results = class_exists( 'HAP_Profile_Module_Runner' )
 	? HAP_Profile_Module_Runner::run_modules_for_user( $user_id, $analysis_modules, $profile )
 	: array();
 
-$ready_results      = array();
-$frontend_only      = array();
-$missing_results    = array();
-$grouped_ready      = array();
-$missing_frequency  = array();
+$ready_results     = array();
+$frontend_only     = array();
+$missing_results   = array();
+$grouped_ready     = array();
+$missing_frequency = array();
 
 $display_title = static function ( $module ) {
 	$title = ! empty( $module['title'] ) ? $module['title'] : $module['slug'];
 	return HAP_Profile_Fields::humanize_module_title( $title );
 };
-
-$tab_map = array(
-	'astrology'         => 'astrology',
-	'astrology_houses'  => 'astrology',
-	'moon_sky'          => 'astrology',
-	'health_lifestyle'  => 'health',
-	'sport_activity'    => 'sport',
-	'numerology'        => 'numerology',
-	'symbolic'          => 'symbolic',
-	'tarot'             => 'symbolic',
-	'chinese_astrology' => 'symbolic',
-);
 
 foreach ( $runner_results as $slug => $runner_item ) {
 	$module = $runner_item['module'];
@@ -72,7 +60,7 @@ foreach ( $runner_results as $slug => $runner_item ) {
 	$section                      = sanitize_key( $module['section'] ?: 'overview' );
 
 	if ( 'ready_result' === $state && ! empty( $runner_item['result'] ) ) {
-		$ready_results[ $slug ] = $runner_item;
+		$ready_results[ $slug ]      = $runner_item;
 		$grouped_ready[ $section ][] = $runner_item;
 	} elseif ( 'missing_fields' === $state ) {
 		if ( empty( $module['onboarding_prompt_enabled'] ) ) {
@@ -90,13 +78,15 @@ foreach ( $runner_results as $slug => $runner_item ) {
 arsort( $missing_frequency );
 
 $featured_priority = array(
-	'burc-dogum-araligi-hesaplama',
-	'vucut-kitle-indeksi-hesaplama',
-	'gunluk-su-ihtiyaci-hesaplama',
-	'ideal-kilo-hesaplama',
+	'gunes-burcu-hesaplama',
 	'yasam-yolu-sayisi-hesaplama',
-	'ay-fazi-hesaplama',
-	'adimdan-kaloriye-hesaplama',
+	'vucut-kitle-indeksi-hesaplama',
+	'burc-uyumu-hesaplama',
+	'cin-burcu-hesaplama',
+	'dogum-tarot-karti-hesaplama',
+	'kisisel-yil-sayisi-hesaplama',
+	'burc-dogum-araligi-hesaplama',
+	'ideal-kilo-hesaplama',
 	'spor-protein-ihtiyaci-hesaplama',
 );
 
@@ -121,42 +111,210 @@ if ( count( $featured_results ) < 6 ) {
 	}
 }
 
-$ready_for_tabs = array_values( $ready_results );
-$frontend_cards = array_slice( array_values( $frontend_only ), 0, 8 );
-$missing_cards  = array_values( $missing_results );
+// ── Category definitions ──────────────────────────────────────────────────────
+$hap_categories = array(
+	'astrology'     => array(
+		'label' => 'Astroloji & Gökyüzü',
+		'icon'  => '♈',
+		'slugs' => array(
+			'gunes-burcu-hesaplama',
+			'burc-dogum-araligi-hesaplama',
+			'burc-dekani-hesaplama',
+			'burc-derecesi-hesaplama',
+			'ay-fazi-hesaplama',
+		),
+	),
+	'numerology'    => array(
+		'label' => 'Numeroloji',
+		'icon'  => '🔢',
+		'slugs' => array(
+			'yasam-yolu-sayisi-hesaplama',
+			'kisisel-yil-sayisi-hesaplama',
+			'dogum-gunu-sayisi-hesaplama',
+		),
+	),
+	'symbolic'      => array(
+		'label' => 'Sembolik Profil',
+		'icon'  => '🌙',
+		'slugs' => array(
+			'cin-burcu-hesaplama',
+			'cin-elementi-hesaplama',
+			'aura-rengi-hesaplama',
+			'dogum-tarot-karti-hesaplama',
+			'ask-tarot-karti-hesaplama',
+		),
+	),
+	'compatibility' => array(
+		'label' => 'Uyum & İlişki',
+		'icon'  => '💫',
+		'slugs' => array(
+			'burc-uyumu-hesaplama',
+			'cin-burcuna-gore-ask-uyumu-hesaplama',
+			'dogum-gunu-hesaplayici',
+		),
+	),
+	'health'        => array(
+		'label' => 'Sağlık & Yaşam',
+		'icon'  => '💚',
+		'slugs' => array(
+			'vucut-kitle-indeksi-hesaplama',
+			'ideal-kilo-hesaplama',
+			'gunluk-su-ihtiyaci-hesaplama',
+			'spor-protein-ihtiyaci-hesaplama',
+			'adimdan-kaloriye-hesaplama',
+		),
+	),
+	'sport'         => array(
+		'label' => 'Spor & Aktivite',
+		'icon'  => '🏃',
+		'slugs' => array(
+			'yuruyus-kalori-yakimi-hesaplama',
+			'kosu-kalori-yakimi-hesaplama',
+			'bisiklet-kalori-yakimi-hesaplama',
+			'yuzme-kalori-yakimi-hesaplama',
+			'ip-atlama-kalori-yakimi-hesaplama',
+			'yoga-kalori-yakimi-hesaplama',
+			'pilates-kalori-yakimi-hesaplama',
+			'zumba-kalori-yakimi-hesaplama',
+			'basketbol-kalori-yakimi-hesaplama',
+			'futbol-kalori-yakimi-hesaplama',
+		),
+	),
+);
 
-$section_cards = array();
-foreach ( $section_config as $section_key => $config ) {
-	$ready_count   = ! empty( $grouped_ready[ $section_key ] ) ? count( $grouped_ready[ $section_key ] ) : 0;
-	$missing_count = 0;
-	foreach ( $missing_results as $item ) {
-		if ( sanitize_key( $item['module']['section'] ?: 'overview' ) === $section_key ) {
-			$missing_count++;
+// Build per-category ready results
+$cat_results = array();
+foreach ( $hap_categories as $cat_key => $cat_def ) {
+	$cat_ready = array();
+	foreach ( $cat_def['slugs'] as $cat_slug ) {
+		if ( isset( $ready_results[ $cat_slug ] ) ) {
+			$cat_ready[ $cat_slug ] = $ready_results[ $cat_slug ];
 		}
 	}
-
-	$status = 'Yakında';
-	$badge  = 'hap-upcoming';
-	if ( $ready_count > 0 ) {
-		$status = 'Hazır';
-		$badge  = 'hap-ready';
-	} elseif ( $missing_count > 0 ) {
-		$status = 'Eksik';
-		$badge  = 'hap-missing';
-	}
-
-	$section_cards[] = array(
-		'key'          => $section_key,
-		'label'        => $config['label'],
-		'icon'         => $config['icon'],
-		'description'  => wp_trim_words( $config['description'], 8, '...' ),
-		'ready_count'  => $ready_count,
-		'missing_count'=> $missing_count,
-		'status'       => $status,
-		'badge'        => $badge,
-		'is_upcoming'  => 0 === $ready_count && 0 === $missing_count,
+	$cat_results[ $cat_key ] = array(
+		'label' => $cat_def['label'],
+		'icon'  => $cat_def['icon'],
+		'slugs' => $cat_def['slugs'],
+		'ready' => $cat_ready,
+		'count' => count( $cat_ready ),
 	);
 }
+
+// Deterministic insight text per category (no AI)
+$build_cat_insight = function ( $cat_key, $cat_ready ) {
+	$rval = function ( $slug ) use ( $cat_ready ) {
+		return isset( $cat_ready[ $slug ] ) ? (string) ( $cat_ready[ $slug ]['result']['value'] ?? '' ) : '';
+	};
+	$runit = function ( $slug ) use ( $cat_ready ) {
+		return isset( $cat_ready[ $slug ] ) ? (string) ( $cat_ready[ $slug ]['result']['unit'] ?? '' ) : '';
+	};
+	$rlabel = function ( $slug ) use ( $cat_ready ) {
+		return isset( $cat_ready[ $slug ] ) ? (string) ( $cat_ready[ $slug ]['result']['label'] ?? '' ) : '';
+	};
+
+	$parts = array();
+	switch ( $cat_key ) {
+		case 'astrology':
+			$v = $rval( 'gunes-burcu-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'Güneş burcun ' . $v;
+			}
+			$v = $rlabel( 'burc-dekani-hesaplama' );
+			if ( $v ) {
+				$parts[] = $v;
+			}
+			$v = $rval( 'ay-fazi-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'Ay fazı: ' . $v;
+			}
+			break;
+
+		case 'numerology':
+			$v = $rval( 'yasam-yolu-sayisi-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'Yaşam yolu sayın ' . $v;
+			}
+			$v = $rval( 'kisisel-yil-sayisi-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'bu yılın kişisel sayısı ' . $v;
+			}
+			$v = $rval( 'dogum-gunu-sayisi-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'doğum günü sayın ' . $v;
+			}
+			break;
+
+		case 'symbolic':
+			$v = $rval( 'cin-burcu-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'Çin burcun ' . $v;
+			}
+			$v = $rval( 'cin-elementi-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'elementi ' . $v;
+			}
+			$v = $rval( 'aura-rengi-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'aura rengin ' . $v;
+			}
+			$v = $rval( 'dogum-tarot-karti-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'doğum tarot kartın ' . $v;
+			}
+			break;
+
+		case 'compatibility':
+			$v = $rval( 'burc-uyumu-hesaplama' );
+			$u = $runit( 'burc-uyumu-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'Burç uyumun ' . $v . ( $u ? ' ' . $u : '' );
+			}
+			$v = $rlabel( 'cin-burcuna-gore-ask-uyumu-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'Çin burcu aşk uyumu: ' . $v;
+			}
+			break;
+
+		case 'health':
+			$v = $rval( 'vucut-kitle-indeksi-hesaplama' );
+			$l = $rlabel( 'vucut-kitle-indeksi-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'Vücut kitle indeksin ' . $v . ( $l ? ' (' . $l . ')' : '' );
+			}
+			$v = $rval( 'gunluk-su-ihtiyaci-hesaplama' );
+			$u = $runit( 'gunluk-su-ihtiyaci-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'günlük ' . $v . ( $u ? ' ' . $u : '' ) . ' su önerilir';
+			}
+			$v = $rval( 'ideal-kilo-hesaplama' );
+			$u = $runit( 'ideal-kilo-hesaplama' );
+			if ( $v ) {
+				$parts[] = 'ideal kilonu ' . $v . ( $u ? ' ' . $u : '' ) . ' olarak hesaplandı';
+			}
+			break;
+
+		case 'sport':
+			foreach ( array( 'kosu-kalori-yakimi-hesaplama', 'yuzme-kalori-yakimi-hesaplama', 'ip-atlama-kalori-yakimi-hesaplama' ) as $ts ) {
+				if ( isset( $cat_ready[ $ts ] ) ) {
+					$title = $cat_ready[ $ts ]['display_title'] ?? '';
+					$val   = $cat_ready[ $ts ]['result']['value'] ?? '';
+					$unit  = $cat_ready[ $ts ]['result']['unit'] ?? '';
+					if ( '' !== (string) $val ) {
+						$parts[] = $title . ': ' . $val . ( $unit ? ' ' . $unit : '' );
+					}
+				}
+			}
+			break;
+	}
+
+	if ( empty( $parts ) ) {
+		return '';
+	}
+	return implode( '. ', $parts ) . '.';
+};
+
+$frontend_cards = array_slice( array_values( $frontend_only ), 0, 8 );
+$missing_cards  = array_values( $missing_results );
 
 $user_shares  = $share->get_user_shares( $user_id );
 $active_share = null;
@@ -167,7 +325,7 @@ foreach ( $user_shares as $share_item ) {
 	}
 }
 
-// AI prep — computed before HTML so sidebar can conditionally show AI link
+// AI prep
 $ai_settings         = class_exists( 'HAP_Profile_AI_Provider' ) ? HAP_Profile_AI_Provider::get_settings() : array();
 $ai_globally_enabled = ! empty( $settings['ai_enabled'] );
 $ai_report           = null;
@@ -199,16 +357,14 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 ?>
 <div class="hap-profile-app">
 
-	<!-- Mobile subnav — hidden on desktop, sticky horizontal tabs on mobile -->
+	<!-- Section subnav — sticky horizontal tabs -->
 	<nav class="hap-mobile-subnav" id="hap-mobile-subnav" aria-label="Bölüm navigasyonu">
 		<div class="hap-mobile-subnav-inner">
 			<a href="#hap-section-overview" class="hap-mobile-nav-link hap-scroll-link is-active" data-section="hap-section-overview">Genel</a>
 			<?php if ( ! empty( $featured_results ) ) : ?>
 				<a href="#hap-section-featured" class="hap-mobile-nav-link hap-scroll-link" data-section="hap-section-featured">Öne Çıkan</a>
 			<?php endif; ?>
-			<?php if ( ! empty( $ready_for_tabs ) ) : ?>
-				<a href="#hap-section-results" class="hap-mobile-nav-link hap-scroll-link" data-section="hap-section-results">Sonuçlar</a>
-			<?php endif; ?>
+			<a href="#hap-section-categories" class="hap-mobile-nav-link hap-scroll-link" data-section="hap-section-categories">Analizler</a>
 			<?php if ( $ai_globally_enabled ) : ?>
 				<a href="#hap-section-ai" class="hap-mobile-nav-link hap-scroll-link" data-section="hap-section-ai">AI Analiz</a>
 			<?php endif; ?>
@@ -218,7 +374,6 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 			<?php if ( ! empty( $missing_cards ) ) : ?>
 				<a href="#hap-section-missing" class="hap-mobile-nav-link hap-scroll-link" data-section="hap-section-missing">Eksik</a>
 			<?php endif; ?>
-			<a href="#hap-section-categories" class="hap-mobile-nav-link hap-scroll-link" data-section="hap-section-categories">Kategoriler</a>
 		</div>
 	</nav>
 
@@ -251,13 +406,11 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 						<span class="hap-sidebar-badge"><?php echo count( $featured_results ); ?></span>
 					</a>
 					<?php endif; ?>
-					<?php if ( ! empty( $ready_for_tabs ) ) : ?>
-					<a href="#hap-section-results" class="hap-sidebar-link hap-scroll-link" data-section="hap-section-results">
-						<span class="hap-sidebar-icon">📊</span>
-						<span class="hap-sidebar-link-label">Tüm Sonuçlar</span>
-						<span class="hap-sidebar-badge hap-badge-green"><?php echo count( $ready_for_tabs ); ?></span>
+					<a href="#hap-section-categories" class="hap-sidebar-link hap-scroll-link" data-section="hap-section-categories">
+						<span class="hap-sidebar-icon">🗂️</span>
+						<span class="hap-sidebar-link-label">Kişisel Analizler</span>
+						<span class="hap-sidebar-badge hap-badge-green"><?php echo count( $ready_results ); ?></span>
 					</a>
-					<?php endif; ?>
 					<?php if ( $ai_globally_enabled ) : ?>
 					<a href="#hap-section-ai" class="hap-sidebar-link hap-scroll-link" data-section="hap-section-ai">
 						<span class="hap-sidebar-icon">🤖</span>
@@ -278,10 +431,6 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 						<span class="hap-sidebar-badge hap-badge-warn"><?php echo count( $missing_cards ); ?></span>
 					</a>
 					<?php endif; ?>
-					<a href="#hap-section-categories" class="hap-sidebar-link hap-scroll-link" data-section="hap-section-categories">
-						<span class="hap-sidebar-icon">🗂️</span>
-						<span class="hap-sidebar-link-label">Kategoriler</span>
-					</a>
 				</nav>
 
 				<div class="hap-sidebar-footer">
@@ -297,6 +446,7 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 		<!-- Main content -->
 		<div class="hap-main-content">
 
+			<!-- ── Hero ──────────────────────────────────────────────────────── -->
 			<section id="hap-section-overview" class="hap-hero-card hap-dashboard-hero">
 
 				<div class="hap-hero-top">
@@ -352,7 +502,6 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 
 				</div><!-- .hap-hero-top -->
 
-				<!-- Stat chips — bottom row -->
 				<div class="hap-hero-stats">
 					<div class="hap-stat-chip hap-stat-chip--green">
 						<span class="hap-stat-chip-value"><?php echo count( $ready_results ); ?></span>
@@ -372,10 +521,11 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 						<span class="hap-stat-chip-label">Eksik Alan</span>
 					</div>
 					<?php endif; ?>
-				</div><!-- .hap-hero-stats -->
+				</div>
 
 			</section>
 
+			<!-- ── Öne Çıkan Sonuçlar ───────────────────────────────────────── -->
 			<?php if ( ! empty( $featured_results ) ) : ?>
 				<section id="hap-section-featured" class="hap-results-area hap-featured-area">
 					<div class="hap-section-heading">
@@ -415,63 +565,95 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 				</section>
 			<?php endif; ?>
 
-			<?php if ( ! empty( $ready_for_tabs ) ) : ?>
-				<section id="hap-section-results" class="hap-results-area">
-					<div class="hap-section-heading">
-						<div>
-							<span class="hap-eyebrow">Tüm Sonuçlarınız</span>
-							<h2 class="hap-section-title">Kişisel Sonuçların</h2>
+			<!-- ── Kategori Bazlı Analizler ─────────────────────────────────── -->
+			<section id="hap-section-categories" class="hap-results-area">
+				<div class="hap-section-heading">
+					<div>
+						<span class="hap-eyebrow">Kişisel Analizler</span>
+						<h2 class="hap-section-title">Kategori Bazlı Analizlerin</h2>
+					</div>
+				</div>
+
+				<!-- 6 category summary cards -->
+				<div class="hap-cat-overview-grid">
+					<?php foreach ( $cat_results as $cat_key => $cat ) : ?>
+					<a href="#hap-cat-<?php echo esc_attr( $cat_key ); ?>" class="hap-cat-summary-card <?php echo $cat['count'] > 0 ? 'has-results' : 'no-results'; ?>">
+						<div class="hap-cat-summary-top">
+							<span class="hap-cat-summary-icon"><?php echo esc_html( $cat['icon'] ); ?></span>
+							<span class="hap-cat-summary-count <?php echo $cat['count'] > 0 ? 'hap-ready' : ''; ?>">
+								<?php echo absint( $cat['count'] ); ?>
+							</span>
 						</div>
+						<strong class="hap-cat-summary-label"><?php echo esc_html( $cat['label'] ); ?></strong>
+						<?php if ( $cat['count'] > 0 ) : ?>
+						<div class="hap-cat-summary-chips">
+							<?php foreach ( array_slice( $cat['ready'], 0, 2 ) as $chip_slug => $chip_item ) : ?>
+								<span class="hap-cat-chip">
+									<?php echo esc_html( $chip_item['result']['value'] ?? '' ); ?>
+									<?php if ( ! empty( $chip_item['result']['unit'] ) ) : ?>
+										<small><?php echo esc_html( $chip_item['result']['unit'] ); ?></small>
+									<?php endif; ?>
+								</span>
+							<?php endforeach; ?>
+						</div>
+						<?php else : ?>
+						<p class="hap-cat-summary-empty">Sonuç henüz hazır değil</p>
+						<?php endif; ?>
+					</a>
+					<?php endforeach; ?>
+				</div>
+
+				<!-- Category detail sections -->
+				<?php foreach ( $cat_results as $cat_key => $cat ) : ?>
+				<?php if ( empty( $cat['ready'] ) ) : ?>
+					<!-- skip empty category -->
+				<?php else : ?>
+				<div id="hap-cat-<?php echo esc_attr( $cat_key ); ?>" class="hap-cat-detail">
+					<div class="hap-cat-detail-head">
+						<span class="hap-cat-detail-icon"><?php echo esc_html( $cat['icon'] ); ?></span>
+						<div class="hap-cat-detail-title-wrap">
+							<h3 class="hap-cat-detail-title"><?php echo esc_html( $cat['label'] ); ?></h3>
+							<?php $insight = $build_cat_insight( $cat_key, $cat['ready'] ); ?>
+							<?php if ( $insight ) : ?>
+								<p class="hap-cat-insight"><?php echo esc_html( $insight ); ?></p>
+							<?php endif; ?>
+						</div>
+						<span class="hap-status-pill hap-ready"><?php echo absint( $cat['count'] ); ?> sonuç</span>
 					</div>
-					<div class="hap-result-filters" role="tablist" aria-label="Sonuç filtreleri">
-						<button type="button" class="hap-result-filter is-active" data-result-filter="all">Tümü</button>
-						<button type="button" class="hap-result-filter" data-result-filter="astrology">Astroloji</button>
-						<button type="button" class="hap-result-filter" data-result-filter="health">Sağlık</button>
-						<button type="button" class="hap-result-filter" data-result-filter="sport">Spor</button>
-						<button type="button" class="hap-result-filter" data-result-filter="numerology">Numeroloji</button>
-						<button type="button" class="hap-result-filter" data-result-filter="symbolic">Sembolik</button>
-					</div>
-					<div class="hap-results-grid hap-results-grid--main">
-						<?php foreach ( $ready_for_tabs as $runner_item ) : ?>
-							<?php
-							$module   = $runner_item['module'];
-							$result   = $runner_item['result'] ?? array();
-							$tool_url = $runner_item['tool_url'] ?? null;
-							$tab_key  = $tab_map[ sanitize_key( $module['section'] ?: 'overview' ) ] ?? 'all';
-							?>
-							<article class="hap-result-card is-ready" data-result-category="<?php echo esc_attr( $tab_key ); ?>">
+					<div class="hap-cat-results-grid">
+						<?php foreach ( $cat['ready'] as $r_slug => $runner_item ) : ?>
+							<?php $result = $runner_item['result'] ?? array(); ?>
+							<article class="hap-result-card is-ready">
 								<div class="hap-result-card-head">
 									<h3><?php echo esc_html( $runner_item['display_title'] ); ?></h3>
-									<span class="hap-status-pill hap-ready">Sonuç hazır</span>
 								</div>
-								<?php if ( isset( $result['value'] ) && ( '' !== (string) $result['value'] || '0' === (string) $result['value'] ) ) : ?>
-									<div class="hap-result-value">
-										<strong class="hap-result-value-text">
-											<?php echo esc_html( $result['value'] ); ?>
-											<?php if ( ! empty( $result['unit'] ) ) : ?>
-												<span class="hap-result-unit"><?php echo esc_html( $result['unit'] ); ?></span>
-											<?php endif; ?>
-										</strong>
-										<?php if ( ! empty( $result['label'] ) ) : ?>
-											<span class="hap-result-value-label"><?php echo esc_html( $result['label'] ); ?></span>
+								<?php if ( isset( $result['value'] ) && '' !== (string) $result['value'] ) : ?>
+								<div class="hap-result-value">
+									<strong class="hap-result-value-text">
+										<?php echo esc_html( $result['value'] ); ?>
+										<?php if ( ! empty( $result['unit'] ) ) : ?>
+											<span class="hap-result-unit"><?php echo esc_html( $result['unit'] ); ?></span>
 										<?php endif; ?>
-									</div>
+									</strong>
+									<?php if ( ! empty( $result['label'] ) ) : ?>
+										<span class="hap-result-value-label"><?php echo esc_html( $result['label'] ); ?></span>
+									<?php endif; ?>
+								</div>
 								<?php endif; ?>
 								<?php if ( ! empty( $result['description'] ) ) : ?>
-									<p class="hap-result-description"><?php echo esc_html( $result['description'] ); ?></p>
-								<?php endif; ?>
-								<?php if ( ! empty( $result['warnings'] ) ) : ?>
-									<p class="hap-result-warning"><?php echo esc_html( reset( $result['warnings'] ) ); ?></p>
-								<?php endif; ?>
-								<?php if ( $tool_url ) : ?>
-									<p class="hap-result-tool-link"><a href="<?php echo esc_url( $tool_url ); ?>" target="_blank" rel="noopener">Detaylı hesaplama aracı</a></p>
+									<?php $desc = $result['description']; ?>
+									<p class="hap-result-description"><?php echo esc_html( strlen( $desc ) > 130 ? substr( $desc, 0, 130 ) . '…' : $desc ); ?></p>
 								<?php endif; ?>
 							</article>
 						<?php endforeach; ?>
 					</div>
-				</section>
-			<?php endif; ?>
+				</div>
+				<?php endif; ?>
+				<?php endforeach; ?>
 
+			</section>
+
+			<!-- ── AI Kişisel Analiz ────────────────────────────────────────── -->
 			<section id="hap-section-ai" class="hap-results-area hap-ai-section">
 				<div class="hap-section-heading">
 					<div>
@@ -554,14 +736,15 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 				<?php endif; ?>
 			</section>
 
+			<!-- ── Gelişmiş analizler (frontend_only) ───────────────────────── -->
 			<?php if ( ! empty( $frontend_cards ) ) : ?>
 				<section id="hap-section-next" class="hap-results-area">
 					<details class="hap-collapsible">
 						<summary class="hap-collapsible-summary">
 							<div>
 								<span class="hap-eyebrow">Yakında</span>
-								<h2 class="hap-section-title">Sonraki analizler</h2>
-								<p class="hap-section-copy">Bu analizler için bilgiler hazır; sonuç motoru hazırlandığında burada görünecek.</p>
+								<h2 class="hap-section-title">Gelişmiş Analizler</h2>
+								<p class="hap-section-copy">Bu analizler için bilgiler hazır; gelişmiş analiz motoru hazırlandığında burada görünecek.</p>
 							</div>
 						</summary>
 						<div class="hap-results-grid hap-results-grid--pending">
@@ -571,7 +754,7 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 										<h3><?php echo esc_html( $runner_item['display_title'] ); ?></h3>
 										<span class="hap-status-pill hap-pending">Yakında</span>
 									</div>
-									<p class="hap-result-card-copy">Bilgilerin hazır. Sonuç motoru hazırlandığında bu kart burada otomatik görünecek.</p>
+									<p class="hap-result-card-copy">Gelişmiş analiz motoru hazırlanıyor.</p>
 								</article>
 							<?php endforeach; ?>
 						</div>
@@ -579,6 +762,7 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 				</section>
 			<?php endif; ?>
 
+			<!-- ── Eksik Bilgi ────────────────────────────────────────────────── -->
 			<?php if ( ! empty( $missing_cards ) ) : ?>
 				<section id="hap-section-missing" class="hap-results-area">
 					<div class="hap-section-heading">
@@ -612,29 +796,7 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 				</section>
 			<?php endif; ?>
 
-			<section id="hap-section-categories" class="hap-sections-area" aria-labelledby="hap-analysis-title">
-				<div class="hap-section-heading">
-					<div>
-						<span class="hap-eyebrow">Kategoriler</span>
-						<h2 class="hap-section-title" id="hap-analysis-title">Analiz Kategorileri</h2>
-					</div>
-				</div>
-				<div class="hap-analysis-card-grid hap-analysis-card-grid--compact">
-					<?php foreach ( $section_cards as $card ) : ?>
-						<article class="hap-analysis-card <?php echo $card['is_upcoming'] ? 'is-upcoming hap-analysis-card--mini' : 'is-open'; ?>">
-							<div class="hap-analysis-card-top">
-								<div class="hap-section-card-icon"><?php echo esc_html( $card['icon'] ); ?></div>
-								<div class="hap-analysis-card-head">
-									<h3 class="hap-section-card-title"><?php echo esc_html( $card['label'] ); ?></h3>
-									<p class="hap-section-card-copy"><?php echo esc_html( $card['description'] ); ?></p>
-								</div>
-								<span class="hap-status-pill <?php echo esc_attr( $card['badge'] ); ?>"><?php echo esc_html( $card['status'] ); ?></span>
-							</div>
-						</article>
-					<?php endforeach; ?>
-				</div>
-			</section>
-
+			<!-- ── Profil düzenleme formu ────────────────────────────────────── -->
 			<?php if ( $edit_mode ) : ?>
 				<section class="hap-profile-form-section" id="hap-profile-form-section">
 					<div class="hap-section-heading">
