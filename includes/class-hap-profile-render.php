@@ -401,17 +401,22 @@ class HAP_Profile_Render {
 			return;
 		}
 
+		$css_path = HAP_PLUGIN_DIR . 'assets/profile.css';
+		$css_ver  = file_exists( $css_path ) ? filemtime( $css_path ) : HAP_VERSION;
 		wp_enqueue_style(
 			'hap-profile',
 			HAP_PLUGIN_URL . 'assets/profile.css',
 			array(),
-			HAP_VERSION
+			$css_ver
 		);
+
+		$js_path = HAP_PLUGIN_DIR . 'assets/profile.js';
+		$js_ver  = file_exists( $js_path ) ? filemtime( $js_path ) : HAP_VERSION;
 		wp_enqueue_script(
 			'hap-profile',
 			HAP_PLUGIN_URL . 'assets/profile.js',
 			array( 'jquery' ),
-			HAP_VERSION,
+			$js_ver,
 			true
 		);
 		wp_localize_script(
