@@ -11,6 +11,7 @@
 			this.initScrollLinks();
 			this.initCopyButtons();
 			this.initResultFilters();
+			this.initAnalysisPanels();
 		},
 
 		initFormTabs: function () {
@@ -171,6 +172,10 @@
 				$('body').addClass('hap-modal-open');
 			});
 
+			$(document).on('click', '#hap-open-share-sidebar', function () {
+				$('#hap-open-share').trigger('click');
+			});
+
 			$(document).on('click', '#hap-close-share, .hap-share-overlay', function () {
 				$('#hap-share-panel').removeClass('is-open').prop('hidden', true);
 				$('body').removeClass('hap-modal-open');
@@ -277,6 +282,48 @@
 
 				$('[data-result-category]').hide();
 				$('[data-result-category="' + filter + '"]').show();
+			});
+		},
+
+		initAnalysisPanels: function () {
+			const $navItems = $('[data-analysis-target]');
+			const $panels = $('[data-analysis-panel]');
+
+			if (!$navItems.length || !$panels.length) {
+				return;
+			}
+
+			const getPanelKey = function () {
+				const hash = (window.location.hash || '').replace(/^#/, '');
+				return hash || 'overview';
+			};
+
+			const setActivePanel = function (panelKey, shouldUpdateHash) {
+				let target = panelKey || 'overview';
+				if (!$panels.filter('[data-analysis-panel="' + target + '"]').length) {
+					target = 'overview';
+				}
+
+				$navItems.removeClass('is-active').attr('aria-pressed', 'false');
+				$panels.removeClass('is-active');
+
+				$navItems.filter('[data-analysis-target="' + target + '"]').addClass('is-active').attr('aria-pressed', 'true');
+				$panels.filter('[data-analysis-panel="' + target + '"]').addClass('is-active');
+
+				if (shouldUpdateHash && window.history && typeof window.history.replaceState === 'function') {
+					window.history.replaceState(null, '', '#' + target);
+				}
+			};
+
+			setActivePanel(getPanelKey(), false);
+
+			$(document).on('click', '[data-analysis-target]', function () {
+				const panelKey = $(this).data('analysisTarget');
+				setActivePanel(panelKey, true);
+			});
+
+			$(window).on('hashchange', function () {
+				setActivePanel(getPanelKey(), false);
 			});
 		}
 	};
