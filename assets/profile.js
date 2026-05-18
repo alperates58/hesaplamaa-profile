@@ -281,10 +281,40 @@
 		}
 	};
 
+	HAP.initSidebar = function () {
+		var sections = document.querySelectorAll('#hap-section-overview, #hap-section-featured, #hap-section-results, #hap-section-ai, #hap-section-next, #hap-section-missing, #hap-section-categories');
+		if ( ! sections.length ) return;
+
+		function setActive(id) {
+			$('.hap-sidebar-link').removeClass('is-active');
+			$('.hap-mobile-nav-link').removeClass('is-active');
+			$('.hap-sidebar-link[data-section="' + id + '"]').addClass('is-active');
+			$('.hap-mobile-nav-link[data-section="' + id + '"]').addClass('is-active');
+		}
+
+		if ( 'IntersectionObserver' in window ) {
+			var observer = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if ( entry.isIntersecting ) {
+						setActive(entry.target.id);
+					}
+				});
+			}, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+			sections.forEach(function (el) { observer.observe(el); });
+		}
+
+		// Also wire the sidebar share button to trigger the same share panel
+		$('#hap-open-share-sidebar').on('click', function () {
+			$('#hap-open-share').trigger('click');
+		});
+	};
+
 	$(document).ready(function () {
 		$('[data-step-save]').each(function () {
 			$(this).attr('data-original-text', $(this).text());
 		});
 		HAP.init();
+		HAP.initSidebar();
 	});
 }(jQuery));
