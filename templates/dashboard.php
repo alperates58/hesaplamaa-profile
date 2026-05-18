@@ -455,6 +455,56 @@ foreach ( $_insight_sources as $_i_slug => $_i_def ) {
 	}
 }
 unset( $_insight_sources, $_i_slug, $_i_def, $_i_val, $_i_unit, $_i_lbl );
+
+// ── Severity helpers — view layer only, no backend logic ─────────────────
+if ( ! function_exists( 'hc_get_result_severity' ) ) {
+	function hc_get_result_severity( $slug, $result ) {
+		if ( 'vucut-kitle-indeksi-hesaplama' === $slug ) {
+			$val = (float) ( $result['value'] ?? 0 );
+			if ( $val > 0 && $val < 18.5 ) { return 'is-warning'; }
+			if ( $val < 25.0 )              { return 'is-success'; }
+			if ( $val < 30.0 )              { return 'is-warning'; }
+			return 'is-danger';
+		}
+		$mystic = array(
+			'gunes-burcu-hesaplama', 'burc-dogum-araligi-hesaplama', 'burc-dekani-hesaplama',
+			'burc-derecesi-hesaplama', 'ay-fazi-hesaplama', 'venus-burcu-hesaplama',
+			'mars-burcu-hesaplama', 'jupiter-burcu-hesaplama', 'saturn-burcu-hesaplama',
+			'sidereal-burc-hesaplama', 'yasam-yolu-sayisi-hesaplama', 'kisisel-yil-sayisi-hesaplama',
+			'dogum-gunu-sayisi-hesaplama', 'cin-burcu-hesaplama', 'cin-burcu-yili-hesaplama',
+			'cin-elementi-hesaplama', 'aura-rengi-hesaplama', 'dogum-tarot-karti-hesaplama',
+			'ask-tarot-karti-hesaplama', 'burc-uyumu-hesaplama', 'cin-burcuna-gore-ask-uyumu-hesaplama',
+			'dogum-gunu-hesaplayici',
+		);
+		if ( in_array( $slug, $mystic, true ) ) { return 'is-mystic'; }
+		$sport = array(
+			'yuruyus-kalori-yakimi-hesaplama', 'kosu-kalori-yakimi-hesaplama', 'bisiklet-kalori-yakimi-hesaplama',
+			'yuzme-kalori-yakimi-hesaplama', 'ip-atlama-kalori-yakimi-hesaplama', 'yoga-kalori-yakimi-hesaplama',
+			'pilates-kalori-yakimi-hesaplama', 'zumba-kalori-yakimi-hesaplama', 'basketbol-kalori-yakimi-hesaplama',
+			'futbol-kalori-yakimi-hesaplama', 'adimdan-kaloriye-hesaplama',
+		);
+		if ( in_array( $slug, $sport, true ) ) { return 'is-neutral'; }
+		$info = array(
+			'bazal-metabolizma-hizi-hesaplama', 'dinlenme-metabolizma-hizi', 'basit-kalori-ihtiyaci-hesaplama',
+			'maksimum-nabiz-hesaplama', 'hedef-nabiz-bolgesi-hesaplama', 'hedef-nabiz-hesaplama',
+			'nabiz-bolgesi-hesaplama', 'gunluk-su-ihtiyaci-hesaplama', 'spor-protein-ihtiyaci-hesaplama',
+			'ideal-kilo-hesaplama',
+		);
+		if ( in_array( $slug, $info, true ) ) { return 'is-info'; }
+		return 'is-success';
+	}
+}
+
+if ( ! function_exists( 'hc_get_vki_pill' ) ) {
+	function hc_get_vki_pill( $result ) {
+		$val = (float) ( $result['value'] ?? 0 );
+		if ( $val <= 0 ) { return null; }
+		if ( $val < 18.5 ) { return array( 'label' => 'Düşük',  'cls' => 'warn' ); }
+		if ( $val < 25.0 ) { return array( 'label' => 'Normal', 'cls' => 'ok' ); }
+		if ( $val < 30.0 ) { return array( 'label' => 'Dikkat', 'cls' => 'warn' ); }
+		return array( 'label' => 'Yüksek', 'cls' => 'danger' );
+	}
+}
 ?>
 <div class="hap-profile-app">
 
@@ -659,11 +709,19 @@ unset( $_insight_sources, $_i_slug, $_i_def, $_i_val, $_i_unit, $_i_lbl );
 					</div>
 					<div class="hap-featured-results">
 						<?php foreach ( $featured_results as $runner_item ) : ?>
-							<?php $result = $runner_item['result']; ?>
-							<article class="hap-result-card hap-result-card--featured is-ready">
+							<?php
+							$result    = $runner_item['result'];
+							$feat_slug = $runner_item['module']['slug'] ?? '';
+							$feat_sev  = hc_get_result_severity( $feat_slug, $result );
+							$feat_pill = ( 'vucut-kitle-indeksi-hesaplama' === $feat_slug ) ? hc_get_vki_pill( $result ) : null;
+							?>
+							<article class="hap-result-card hap-result-card--featured is-ready <?php echo esc_attr( $feat_sev ); ?>">
 								<div class="hap-result-card-head">
 									<h3><?php echo esc_html( $runner_item['display_title'] ); ?></h3>
 									<span class="hap-status-pill hap-ready">Hazır</span>
+									<?php if ( $feat_pill ) : ?>
+										<span class="hap-severity-pill <?php echo esc_attr( $feat_pill['cls'] ); ?>"><?php echo esc_html( $feat_pill['label'] ); ?></span>
+									<?php endif; ?>
 								</div>
 								<div class="hap-result-value">
 									<strong class="hap-result-value-text">
@@ -752,12 +810,23 @@ unset( $_insight_sources, $_i_slug, $_i_def, $_i_val, $_i_unit, $_i_lbl );
 					<?php elseif ( 'health' === $cat_key ) : ?>
 					<p class="hap-cat-note">Bilgilendirme amaçlıdır; tıbbi teşhis veya tedavi önerisi değildir.</p>
 					<?php endif; ?>
+					<?php
+					$cat_visible = array_slice( $cat['ready'], 0, 6, true );
+					$cat_hidden  = array_slice( $cat['ready'], 6, null, true );
+					?>
 					<div class="hap-cat-results-grid">
-						<?php foreach ( $cat['ready'] as $r_slug => $runner_item ) : ?>
-							<?php $result = $runner_item['result'] ?? array(); ?>
-							<article class="hap-result-card is-ready">
+						<?php foreach ( $cat_visible as $r_slug => $runner_item ) : ?>
+							<?php
+							$result   = $runner_item['result'] ?? array();
+							$card_sev = hc_get_result_severity( $r_slug, $result );
+							$sev_pill = ( 'vucut-kitle-indeksi-hesaplama' === $r_slug ) ? hc_get_vki_pill( $result ) : null;
+							?>
+							<article class="hap-result-card is-ready <?php echo esc_attr( $card_sev ); ?>">
 								<div class="hap-result-card-head">
 									<h3><?php echo esc_html( $runner_item['display_title'] ); ?></h3>
+									<?php if ( $sev_pill ) : ?>
+										<span class="hap-severity-pill <?php echo esc_attr( $sev_pill['cls'] ); ?>"><?php echo esc_html( $sev_pill['label'] ); ?></span>
+									<?php endif; ?>
 								</div>
 								<?php if ( isset( $result['value'] ) && '' !== (string) $result['value'] ) : ?>
 								<div class="hap-result-value">
@@ -788,6 +857,54 @@ unset( $_insight_sources, $_i_slug, $_i_def, $_i_val, $_i_unit, $_i_lbl );
 							</article>
 						<?php endforeach; ?>
 					</div>
+					<?php if ( ! empty( $cat_hidden ) ) : ?>
+					<details class="hap-results-collapsible">
+						<summary class="hap-results-collapsible-summary">+ <?php echo absint( count( $cat_hidden ) ); ?> sonuç daha göster</summary>
+						<div class="hap-cat-results-grid hap-cat-results-grid--extra">
+							<?php foreach ( $cat_hidden as $r_slug => $runner_item ) : ?>
+								<?php
+								$result   = $runner_item['result'] ?? array();
+								$card_sev = hc_get_result_severity( $r_slug, $result );
+								$sev_pill = ( 'vucut-kitle-indeksi-hesaplama' === $r_slug ) ? hc_get_vki_pill( $result ) : null;
+								?>
+								<article class="hap-result-card is-ready <?php echo esc_attr( $card_sev ); ?>">
+									<div class="hap-result-card-head">
+										<h3><?php echo esc_html( $runner_item['display_title'] ); ?></h3>
+										<?php if ( $sev_pill ) : ?>
+											<span class="hap-severity-pill <?php echo esc_attr( $sev_pill['cls'] ); ?>"><?php echo esc_html( $sev_pill['label'] ); ?></span>
+										<?php endif; ?>
+									</div>
+									<?php if ( isset( $result['value'] ) && '' !== (string) $result['value'] ) : ?>
+									<div class="hap-result-value">
+										<strong class="hap-result-value-text">
+											<?php echo esc_html( $result['value'] ); ?>
+											<?php if ( ! empty( $result['unit'] ) ) : ?>
+												<span class="hap-result-unit"><?php echo esc_html( $result['unit'] ); ?></span>
+											<?php endif; ?>
+										</strong>
+										<?php if ( ! empty( $result['label'] ) ) : ?>
+											<span class="hap-result-value-label"><?php echo esc_html( $result['label'] ); ?></span>
+										<?php endif; ?>
+									</div>
+									<?php endif; ?>
+									<?php if ( ! empty( $result['description'] ) ) : ?>
+										<?php $desc = $result['description']; ?>
+										<p class="hap-result-description"><?php echo esc_html( strlen( $desc ) > 130 ? substr( $desc, 0, 130 ) . '…' : $desc ); ?></p>
+									<?php endif; ?>
+									<?php if ( ! empty( $result['warnings'] ) ) : ?>
+										<p class="hap-result-warning"><?php echo esc_html( reset( $result['warnings'] ) ); ?></p>
+									<?php endif; ?>
+									<?php if ( ! empty( $result_explanations[ $r_slug ] ) ) : ?>
+									<div class="hap-result-meaning">
+										<span class="hap-result-meaning-label">Bu ne anlama geliyor?</span>
+										<p class="hap-result-meaning-text"><?php echo esc_html( $result_explanations[ $r_slug ] ); ?></p>
+									</div>
+									<?php endif; ?>
+								</article>
+							<?php endforeach; ?>
+						</div>
+					</details>
+					<?php endif; ?>
 				</div>
 				<?php endif; ?>
 				<?php endforeach; ?>

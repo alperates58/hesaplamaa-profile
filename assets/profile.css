@@ -1210,6 +1210,147 @@
 	background: linear-gradient(180deg, #fff 0%, #fff9f7 100%);
 }
 
+/* ── Result card severity modifiers ───────────────────────────────── */
+.hap-profile-app .hap-result-card.is-success {
+	background: linear-gradient(180deg, #fff 0%, #f7fff9 100%);
+	border-color: #d1fae5;
+}
+.hap-profile-app .hap-result-card.is-success .hap-result-value {
+	background: linear-gradient(135deg, #f0fdf4, #ecfdf3);
+	border-color: #bbf7d0;
+}
+.hap-profile-app .hap-result-card.is-success .hap-result-value-text,
+.hap-profile-app .hap-result-card.is-success .hap-result-unit { color: #027a48; }
+
+.hap-profile-app .hap-result-card.is-warning {
+	background: linear-gradient(180deg, #fff 0%, #fffbf0 100%);
+	border-color: #fde68a;
+}
+.hap-profile-app .hap-result-card.is-warning .hap-result-value {
+	background: linear-gradient(135deg, #fffbeb, #fef3c7);
+	border-color: #fcd34d;
+}
+.hap-profile-app .hap-result-card.is-warning .hap-result-value-text,
+.hap-profile-app .hap-result-card.is-warning .hap-result-unit { color: #92400e; }
+
+.hap-profile-app .hap-result-card.is-danger {
+	background: linear-gradient(180deg, #fff 0%, #fff5f5 100%);
+	border-color: #fecaca;
+}
+.hap-profile-app .hap-result-card.is-danger .hap-result-value {
+	background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+	border-color: #fca5a5;
+}
+.hap-profile-app .hap-result-card.is-danger .hap-result-value-text,
+.hap-profile-app .hap-result-card.is-danger .hap-result-unit { color: #b91c1c; }
+
+.hap-profile-app .hap-result-card.is-info {
+	background: linear-gradient(180deg, #fff 0%, #f5f9ff 100%);
+	border-color: #bfdbfe;
+}
+.hap-profile-app .hap-result-card.is-info .hap-result-value {
+	background: linear-gradient(135deg, #eff6ff, #dbeafe);
+	border-color: #93c5fd;
+}
+.hap-profile-app .hap-result-card.is-info .hap-result-value-text,
+.hap-profile-app .hap-result-card.is-info .hap-result-unit { color: #1e40af; }
+
+.hap-profile-app .hap-result-card.is-mystic {
+	background: linear-gradient(180deg, #fff 0%, #faf5ff 100%);
+	border-color: #e9d5ff;
+}
+.hap-profile-app .hap-result-card.is-mystic .hap-result-value {
+	background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+	border-color: #d8b4fe;
+}
+.hap-profile-app .hap-result-card.is-mystic .hap-result-value-text,
+.hap-profile-app .hap-result-card.is-mystic .hap-result-unit { color: #6d28d9; }
+
+.hap-profile-app .hap-result-card.is-neutral {
+	background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+	border-color: #e2e8f0;
+}
+.hap-profile-app .hap-result-card.is-neutral .hap-result-value {
+	background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+	border-color: #cbd5e1;
+}
+.hap-profile-app .hap-result-card.is-neutral .hap-result-value-text,
+.hap-profile-app .hap-result-card.is-neutral .hap-result-unit { color: #475569; }
+
+/* Featured card severity overrides */
+.hap-profile-app .hap-result-card--featured.is-warning {
+	border-color: #fde68a;
+	box-shadow: 0 18px 40px rgba(146, 64, 14, 0.08);
+}
+.hap-profile-app .hap-result-card--featured.is-danger {
+	border-color: #fecaca;
+	box-shadow: 0 18px 40px rgba(185, 28, 28, 0.08);
+}
+.hap-profile-app .hap-result-card--featured.is-mystic {
+	background: linear-gradient(180deg, #fff 0%, #faf5ff 100%);
+	border-color: #e9d5ff;
+	box-shadow: 0 18px 40px rgba(109, 40, 217, 0.08);
+}
+.hap-profile-app .hap-result-card--featured.is-info {
+	background: linear-gradient(180deg, #fff 0%, #f5f9ff 100%);
+	border-color: #bfdbfe;
+	box-shadow: 0 18px 40px rgba(30, 64, 175, 0.07);
+}
+.hap-profile-app .hap-result-card--featured.is-neutral {
+	background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+	border-color: #e2e8f0;
+	box-shadow: 0 18px 40px rgba(71, 85, 105, 0.06);
+}
+
+/* Severity status pills */
+.hap-profile-app .hap-severity-pill {
+	display: inline-flex;
+	align-items: center;
+	font-size: 11px;
+	font-weight: 700;
+	padding: 3px 9px;
+	border-radius: 999px;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+.hap-profile-app .hap-severity-pill.ok     { background: #dcfce7; color: #16a34a; }
+.hap-profile-app .hap-severity-pill.warn   { background: #fef9c3; color: #a16207; }
+.hap-profile-app .hap-severity-pill.danger { background: #fee2e2; color: #b91c1c; }
+.hap-profile-app .hap-severity-pill.info   { background: #dbeafe; color: #1e40af; }
+.hap-profile-app .hap-severity-pill.mystic { background: #f3e8ff; color: #7c3aed; }
+
+/* Collapsible extra results */
+.hap-profile-app .hap-results-collapsible {
+	margin-top: 12px;
+}
+.hap-profile-app .hap-results-collapsible-summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	border-radius: 999px;
+	border: 1px solid var(--hap-border);
+	background: #fff;
+	color: var(--hap-text-muted);
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	list-style: none;
+	transition: all 0.18s ease;
+}
+.hap-profile-app .hap-results-collapsible-summary::-webkit-details-marker { display: none; }
+.hap-profile-app .hap-results-collapsible-summary:hover {
+	border-color: var(--hap-cta);
+	color: var(--hap-cta);
+}
+.hap-profile-app .hap-results-collapsible[open] .hap-results-collapsible-summary {
+	color: var(--hap-cta);
+	border-color: rgba(255, 90, 95, 0.4);
+}
+.hap-profile-app .hap-cat-results-grid--extra {
+	margin-top: 12px;
+}
+
 .hap-profile-app .hap-result-link {
 	color: var(--hap-cta);
 	font-weight: 700;
@@ -2452,4 +2593,8 @@
 	font-size: 12px;
 	color: #475569;
 	line-height: 1.55;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
 }
