@@ -1532,18 +1532,15 @@
 }
 
 /* ==========================================================================
-   Premium sidebar layout — v2 (responsive-first)
+   Premium sidebar layout — v3
    ========================================================================== */
 
-/* App wrapper: use full available width, centred, with safe gutters */
+/* App wrapper: fill the theme content column */
 .hap-profile-app {
-	width: min(1240px, calc(100vw - 48px));
-	max-width: 1240px;
-	margin-inline: auto;
 	box-sizing: border-box;
 }
 
-/* Main content wrapper — always single column, inherits gap from .hap-dashboard */
+/* Main content wrapper */
 .hap-profile-app .hap-main-content {
 	display: grid;
 	gap: 24px;
@@ -1551,19 +1548,20 @@
 	width: 100%;
 }
 
-/* Sidebar: hidden by default (narrow / mid screens) */
+/* Sidebar: hidden by default */
 .hap-profile-app .hap-sidebar {
 	display: none;
 }
 
-/* Mobile subnav: visible below sidebar breakpoint */
+/* ── Section subnav — visible on all screen sizes ───────────────────────── */
 .hap-profile-app .hap-mobile-subnav {
 	display: block;
 	position: sticky;
 	top: 0;
 	z-index: 100;
-	background: rgba(255, 255, 255, 0.96);
-	backdrop-filter: blur(8px);
+	background: rgba(255, 255, 255, 0.97);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
 	border-bottom: 1px solid var(--hap-border);
 	margin-bottom: 20px;
 }
@@ -1743,13 +1741,14 @@
 }
 
 /* --------------------------------------------------------------------------
-   Hero stat chips
+   Hero stat chips — span full hero width
    -------------------------------------------------------------------------- */
 .hap-profile-app .hap-hero-stat-row {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 10px;
 	margin-bottom: 20px;
+	grid-column: 1 / -1;
 }
 
 .hap-profile-app .hap-stat-chip {
@@ -1818,9 +1817,20 @@
 }
 
 /* --------------------------------------------------------------------------
-   Two-column sidebar layout — only on wide enough screens (≥1180px)
+   Hero card: single column for typical theme content widths (≤1100px viewport)
+   Theme containers are often 700-900px; 2-col hero only makes sense on wide screens.
    -------------------------------------------------------------------------- */
-@media (min-width: 1180px) {
+@media (max-width: 1100px) {
+	.hap-profile-app .hap-hero-card {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* --------------------------------------------------------------------------
+   Two-column sidebar layout — only on very wide viewports (≥1420px)
+   At this width, even with a theme container, there is room for sidebar.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1420px) {
 	.hap-profile-app .hap-dashboard {
 		grid-template-columns: 260px minmax(0, 1fr);
 		align-items: start;
@@ -1834,21 +1844,16 @@
 		grid-row: 1 / 99;
 	}
 
-	/* Hide mobile subnav on wide screens */
+	/* Hide section subnav when sidebar is shown */
 	.hap-profile-app .hap-mobile-subnav {
 		display: none;
 	}
 }
 
 /* --------------------------------------------------------------------------
-   Mobile (≤600px) — tighter gutters, single column everything
+   Mobile (≤480px) — compact chips
    -------------------------------------------------------------------------- */
-@media (max-width: 600px) {
-	.hap-profile-app {
-		width: calc(100vw - 24px);
-		padding: 16px 0 40px;
-	}
-
+@media (max-width: 480px) {
 	.hap-profile-app .hap-hero-stat-row {
 		gap: 8px;
 	}
