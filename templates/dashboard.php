@@ -298,8 +298,62 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 		<div class="hap-main-content">
 
 			<section id="hap-section-overview" class="hap-hero-card hap-dashboard-hero">
-				<!-- Stat chips -->
-				<div class="hap-hero-stat-row">
+
+				<div class="hap-hero-top">
+
+					<div class="hap-hero-main">
+						<div class="hap-hero-avatar-wrap">
+							<?php echo get_avatar( $user_id, 88, '', '', array( 'class' => 'hap-avatar' ) ); ?>
+						</div>
+						<div class="hap-hero-copy">
+							<span class="hap-eyebrow">Kişisel Analiz Panelin</span>
+							<h1 class="hap-hero-title">Merhaba, <?php echo esc_html( $nickname ); ?></h1>
+							<p class="hap-hero-subtitle">Profilinden üretilen en önemli sonuçlara kısa yoldan buradan ulaşabilirsin.</p>
+							<div class="hap-hero-actions">
+								<a href="<?php echo esc_url( $edit_url ); ?>" class="hap-btn hap-btn-primary">Bilgilerimi Güncelle</a>
+								<?php if ( ! empty( $settings['shareable_profile'] ) ) : ?>
+									<button class="hap-btn hap-btn-secondary" id="hap-open-share" type="button">Profilimi Paylaş</button>
+								<?php endif; ?>
+							</div>
+						</div>
+					</div>
+
+					<div class="hap-hero-aside">
+						<div class="hap-progress-cluster">
+							<div class="hap-progress-card">
+								<div class="hap-progress-meta">
+									<div>
+										<strong>Profil tamamlama: %<?php echo absint( $minimum_completion ); ?></strong>
+										<span>Minimum profil alanları</span>
+									</div>
+								</div>
+								<div class="hap-progress-bar" aria-hidden="true"><div class="hap-progress-fill" style="width: <?php echo absint( $minimum_completion ); ?>%"></div></div>
+							</div>
+							<div class="hap-progress-card">
+								<div class="hap-progress-meta">
+									<div>
+										<strong>Analiz hazırlığı: %<?php echo absint( $analysis_stats['percentage'] ); ?></strong>
+										<span><?php echo esc_html( $analysis_stats['filled'] . '/' . $analysis_stats['total'] . ' gerekli alan hazır' ); ?></span>
+									</div>
+								</div>
+								<div class="hap-progress-bar" aria-hidden="true"><div class="hap-progress-fill" style="width: <?php echo absint( $analysis_stats['percentage'] ); ?>%"></div></div>
+							</div>
+						</div>
+						<div class="hap-hero-note">
+							<strong><?php echo esc_html( count( $ready_results ) ); ?> sonuç hazır</strong>
+							<?php $pending_count = count( $frontend_only ); ?>
+							<?php if ( $pending_count > 0 ) : ?>
+							<span><?php echo esc_html( $pending_count ); ?> analiz yakında sonuç üretmeye hazır.</span>
+							<?php elseif ( count( $missing_results ) > 0 ) : ?>
+							<span><?php echo esc_html( count( $missing_results ) ); ?> analiz için ek bilgi gerekiyor.</span>
+							<?php endif; ?>
+						</div>
+					</div>
+
+				</div><!-- .hap-hero-top -->
+
+				<!-- Stat chips — bottom row -->
+				<div class="hap-hero-stats">
 					<div class="hap-stat-chip hap-stat-chip--green">
 						<span class="hap-stat-chip-value"><?php echo count( $ready_results ); ?></span>
 						<span class="hap-stat-chip-label">Hazır Sonuç</span>
@@ -318,55 +372,8 @@ if ( $url_ai_status && 'ai_disabled' !== $ai_display_status ) {
 						<span class="hap-stat-chip-label">Eksik Alan</span>
 					</div>
 					<?php endif; ?>
-				</div>
+				</div><!-- .hap-hero-stats -->
 
-				<div class="hap-hero-main">
-					<div class="hap-hero-avatar-wrap">
-						<?php echo get_avatar( $user_id, 88, '', '', array( 'class' => 'hap-avatar' ) ); ?>
-					</div>
-					<div class="hap-hero-copy">
-						<span class="hap-eyebrow">Kişisel Analiz Panelin</span>
-						<h1 class="hap-hero-title">Merhaba, <?php echo esc_html( $nickname ); ?></h1>
-						<p class="hap-hero-subtitle">Profilinden üretilen en önemli sonuçlara kısa yoldan buradan ulaşabilirsin.</p>
-						<div class="hap-hero-actions">
-							<a href="<?php echo esc_url( $edit_url ); ?>" class="hap-btn hap-btn-primary">Bilgilerimi Güncelle</a>
-							<?php if ( ! empty( $settings['shareable_profile'] ) ) : ?>
-								<button class="hap-btn hap-btn-secondary" id="hap-open-share" type="button">Profilimi Paylaş</button>
-							<?php endif; ?>
-						</div>
-					</div>
-				</div>
-				<div class="hap-hero-aside">
-					<div class="hap-progress-cluster">
-						<div class="hap-progress-card">
-							<div class="hap-progress-meta">
-								<div>
-									<strong>Profil tamamlama: %<?php echo absint( $minimum_completion ); ?></strong>
-									<span>Minimum profil alanları</span>
-								</div>
-							</div>
-							<div class="hap-progress-bar" aria-hidden="true"><div class="hap-progress-fill" style="width: <?php echo absint( $minimum_completion ); ?>%"></div></div>
-						</div>
-						<div class="hap-progress-card">
-							<div class="hap-progress-meta">
-								<div>
-									<strong>Analiz hazırlığı: %<?php echo absint( $analysis_stats['percentage'] ); ?></strong>
-									<span><?php echo esc_html( $analysis_stats['filled'] . '/' . $analysis_stats['total'] . ' gerekli alan hazır' ); ?></span>
-								</div>
-							</div>
-							<div class="hap-progress-bar" aria-hidden="true"><div class="hap-progress-fill" style="width: <?php echo absint( $analysis_stats['percentage'] ); ?>%"></div></div>
-						</div>
-					</div>
-					<div class="hap-hero-note">
-						<strong><?php echo esc_html( count( $ready_results ) ); ?> sonuç hazır</strong>
-						<?php $pending_count = count( $frontend_only ); ?>
-						<?php if ( $pending_count > 0 ) : ?>
-						<span><?php echo esc_html( $pending_count ); ?> analiz yakında sonuç üretmeye hazır.</span>
-						<?php elseif ( count( $missing_results ) > 0 ) : ?>
-						<span><?php echo esc_html( count( $missing_results ) ); ?> analiz için ek bilgi gerekiyor.</span>
-						<?php endif; ?>
-					</div>
-				</div>
 			</section>
 
 			<?php if ( ! empty( $featured_results ) ) : ?>

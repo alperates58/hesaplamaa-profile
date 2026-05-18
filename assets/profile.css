@@ -1967,3 +1967,141 @@
 		padding-right: 12px;
 	}
 }
+
+/* ==========================================================================
+   v4 UI Stabilisation
+   Overrides earlier rules that were fighting with the theme.
+   All scoped under .hap-profile-page-shell to avoid bleed.
+   ========================================================================== */
+
+/* ── Sidebar: force-hide below 1180px, force-show above ──────────────────── */
+@media (max-width: 1179px) {
+	.hap-profile-page-shell .hap-profile-app .hap-sidebar {
+		display: none !important;
+	}
+	.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
+		display: block !important;
+	}
+}
+
+@media (min-width: 1180px) {
+	.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
+		display: none !important;
+	}
+	.hap-profile-page-shell .hap-profile-app .hap-sidebar {
+		display: block !important;
+		position: sticky;
+		top: 96px;
+		grid-row: 1 / 99;
+		align-self: start;
+	}
+}
+
+/* ── Mobile subnav chip styling (visible ≤1179px) ────────────────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav {
+	position: sticky;
+	top: 0;
+	z-index: 110;
+	background: rgba(255, 255, 255, 0.97);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border-bottom: 1px solid var(--hap-border, #e8edf2);
+	margin-bottom: 20px;
+}
+
+.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav-inner {
+	display: flex !important;
+	gap: 6px;
+	overflow-x: auto;
+	scrollbar-width: none;
+	padding: 10px 0;
+	-webkit-overflow-scrolling: touch;
+}
+
+.hap-profile-page-shell .hap-profile-app .hap-mobile-subnav-inner::-webkit-scrollbar {
+	display: none;
+}
+
+.hap-profile-page-shell .hap-profile-app .hap-mobile-nav-link {
+	display: inline-flex !important;
+	flex-shrink: 0;
+	padding: 7px 16px;
+	border-radius: 999px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--hap-text-muted, #64748b);
+	text-decoration: none !important;
+	border: 1px solid var(--hap-border, #e8edf2);
+	background: var(--hap-card-bg, #fff);
+	white-space: nowrap;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.hap-profile-page-shell .hap-profile-app .hap-mobile-nav-link:hover,
+.hap-profile-page-shell .hap-profile-app .hap-mobile-nav-link.is-active {
+	background: rgba(255, 90, 95, 0.08) !important;
+	color: var(--hap-cta, #ff5a5f) !important;
+	border-color: rgba(255, 90, 95, 0.25) !important;
+	font-weight: 600;
+}
+
+/* ── Hero card: flex column so child order is deterministic ──────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-hero-card {
+	display: flex !important;
+	flex-direction: column;
+	gap: 28px;
+	padding: 32px;
+}
+
+/* ── Hero top: user info left + progress right ───────────────────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-hero-top {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+	gap: 28px;
+	align-items: start;
+}
+
+@media (max-width: 900px) {
+	.hap-profile-page-shell .hap-profile-app .hap-hero-top {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ── Stat chips row at hero bottom ───────────────────────────────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-hero-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 12px;
+	padding-top: 20px;
+	border-top: 1px solid var(--hap-border, #e8edf2);
+}
+
+/* Chips inside .hap-hero-stats inherit from existing .hap-stat-chip rules */
+.hap-profile-page-shell .hap-profile-app .hap-hero-stats .hap-stat-chip {
+	padding: 14px 18px;
+}
+
+/* ── Progress bar overflow guard ─────────────────────────────────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-progress-bar {
+	overflow: hidden;
+	max-width: 100%;
+}
+
+/* ── Sidebar card visual ─────────────────────────────────────────────────── */
+.hap-profile-page-shell .hap-profile-app .hap-sidebar-inner {
+	border-radius: var(--hap-radius-md, 16px);
+	background: var(--hap-card-bg, #fff);
+	border: 1px solid var(--hap-border, #e8edf2);
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+	padding: 20px 16px 16px;
+}
+
+/* ── Mobile compact ≤480px ───────────────────────────────────────────────── */
+@media (max-width: 480px) {
+	.hap-profile-page-shell .hap-profile-app .hap-hero-card {
+		padding: 20px 16px;
+	}
+	.hap-profile-page-shell .hap-profile-app .hap-hero-stats {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
