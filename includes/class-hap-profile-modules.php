@@ -290,6 +290,159 @@ class HAP_Profile_Modules {
 		return is_array( $decoded ) ? array_values( array_filter( array_map( 'sanitize_key', $decoded ) ) ) : array();
 	}
 
+	/**
+	 * Suite tablosundaki manifest verilerini wp_hap_profile_modules'a toplu senkronize eder.
+	 *
+	 * @param array $args {
+	 *     @type bool     $dry_run                   Varsayılan false.
+	 *     @type string[] $statuses                  Varsayılan ['profile_core','profile_optional'].
+	 *     @type bool     $update_result_enabled      Varsayılan true.
+	 *     @type bool     $preserve_manual_overrides  Varsayılan true (şimdilik bilgi amaçlı).
+	 *     @type bool     $include_tool_only          Varsayılan false.
+	 *     @type bool     $include_disabled           Varsayılan false.
+	 * }
+	 * @return array Rapor dizisi.
+	 */
+	public static function sync_modules_from_suite( $args = array() ) {
+		global $wpdb;
+
+		$defaults = array(
+			'dry_run'                   => false,
+			'statuses'                  => array( 'profile_core', 'profile_optional' ),
+			'update_result_enabled'     => true,
+			'preserve_manual_overrides' => true,
+			'include_tool_only'         => false,
+			'include_disabled'          => false,
+		);
+		$args = wp_parse_args( $args, $defaults );
+
+		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
+			return array( 'error' => 'Suite tablosu bulunamadı.' );
+		}
+
+		$modules_table = $wpdb->prefix . HAP_TABLE_MODULES;
+		$statuses      = array_values( (array) $args['statuses'] );
+		if ( $args['include_tool_only'] ) {
+			$statuses[] = 'tool_only';
+		}
+		if ( $args['include_disabled'] ) {
+			$statuses[] = 'disabled';
+		}
+		$statuses = array_unique( $statuses );
+
+		$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+		$modules      = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM `{$modules_table}` WHERE profile_status IN ({$placeholders}) ORDER BY profile_status, slug", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				$statuses
+			),
+			ARRAY_A
+		);
+
+		$report = array(
+			'total'           => count( $modules ),
+			'updated'         => 0,
+			'backend_enabled' => 0,
+			'result_disabled' => 0,
+			'pending_adapter' => 0,
+			'skipped'         => 0,
+			'dry_run'         => (bool) $args['dry_run'],
+			'details'         => array(),
+		);
+
+		$now = current_time( 'mysql' );
+
+		foreach ( $modules as $module ) {
+			$slug     = $module['slug'];
+			$manifest = HAP_Suite_Module_Fields::get_module_manifest( $slug );
+
+			if ( ! $manifest ) {
+				$report['skipped']++;
+				continue;
+			}
+
+			$backend_supported = (bool) $manifest['backend_supported'];
+			$profile_status    = $module['profile_status'];
+
+			$runner_type   = $backend_supported ? 'calculate_api' : 'pending_adapter';
+			$runner_status = $backend_supported ? 'ok' : 'pending_adapter';
+
+			// result_enabled kuralı
+			$result_enabled = (int) $module['result_enabled'];
+			if ( $args['update_result_enabled'] ) {
+				if ( in_array( $profile_status, array( 'profile_core', 'profile_optional' ), true ) ) {
+					$new_result_enabled = $backend_supported ? 1 : 0;
+				} else {
+					$new_result_enabled = 0;
+				}
+				if ( $new_result_enabled < $result_enabled ) {
+					$report['result_disabled']++;
+				}
+				$result_enabled = $new_result_enabled;
+			}
+
+			// onboarding_prompt_enabled kuralı
+			$onboarding_prompt_enabled = (int) $module['onboarding_prompt_enabled'];
+			if ( ! in_array( $profile_status, array( 'profile_core', 'profile_optional' ), true ) ) {
+				$onboarding_prompt_enabled = 0;
+			} elseif ( ! $backend_supported ) {
+				$onboarding_prompt_enabled = 1;
+			}
+
+			// ai_include kuralı: null/boş ise otomatik belirle
+			$ai_include = (int) $module['ai_include'];
+			if ( '' === (string) $module['ai_include'] || null === $module['ai_include'] ) {
+				$ai_include = ( $manifest['ai_useful'] && in_array( $profile_status, array( 'profile_core', 'profile_optional' ), true ) ) ? 1 : 0;
+			}
+
+			if ( $backend_supported ) {
+				$report['backend_enabled']++;
+			}
+			if ( 'pending_adapter' === $runner_status ) {
+				$report['pending_adapter']++;
+			}
+
+			$required_fields_json = wp_json_encode( $manifest['required_fields'] );
+			$input_mapping_json   = wp_json_encode( $manifest['input_mapping'] );
+
+			$report['details'][] = array(
+				'slug'              => $slug,
+				'profile_status'    => $profile_status,
+				'backend_supported' => $backend_supported,
+				'result_enabled'    => $result_enabled,
+				'runner_type'       => $runner_type,
+				'runner_status'     => $runner_status,
+			);
+			$report['updated']++;
+
+			if ( ! $args['dry_run'] ) {
+				$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$modules_table,
+					array(
+						'suite_source'             => 'hc_module_fields',
+						'suite_last_synced_at'     => $now,
+						'suite_backend_supported'  => $backend_supported ? 1 : 0,
+						'suite_section'            => $manifest['section'] ?? '',
+						'suite_required_fields'    => $required_fields_json,
+						'suite_input_mapping'      => $input_mapping_json,
+						'required_fields'          => $required_fields_json,
+						'input_mapping'            => $input_mapping_json,
+						'runner_type'              => $runner_type,
+						'runner_status'            => $runner_status,
+						'result_enabled'           => $result_enabled,
+						'onboarding_prompt_enabled' => $onboarding_prompt_enabled,
+						'ai_include'               => $ai_include,
+					),
+					array( 'id' => (int) $module['id'] ),
+					array( '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d' ),
+					array( '%d' )
+				);
+			}
+		}
+
+		return $report;
+	}
+
 	private function build_formats_for_row( array $row ) {
 		$formats = array();
 		foreach ( $row as $key => $value ) {

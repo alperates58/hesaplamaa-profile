@@ -272,7 +272,32 @@ class HAP_Profile_Admin {
 	}
 
 	public function ajax_sync_from_suite() {
-		wp_send_json_error( array( 'message' => 'Bu görev kapsamında Suite sync değiştirilmedi.' ) );
+		wp_send_json_error( array( 'message' => 'Lütfen "Suite Metadata Senkronize Et" butonunu kullanın.' ) );
+	}
+
+	public function ajax_sync_suite_metadata() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+
+		if ( ! class_exists( 'HAP_Suite_Module_Fields' ) || ! HAP_Suite_Module_Fields::table_exists() ) {
+			wp_send_json_error( array( 'message' => 'Suite tablosu bulunamadı.' ) );
+		}
+
+		$dry_run = ! empty( $_POST['dry_run'] );
+		$report  = HAP_Profile_Modules::sync_modules_from_suite( array(
+			'dry_run'                   => $dry_run,
+			'statuses'                  => array( 'profile_core', 'profile_optional' ),
+			'update_result_enabled'     => true,
+			'preserve_manual_overrides' => true,
+		) );
+
+		if ( isset( $report['error'] ) ) {
+			wp_send_json_error( array( 'message' => $report['error'] ) );
+		}
+
+		wp_send_json_success( $report );
 	}
 
 	public function ajax_bulk_modules() {
@@ -592,9 +617,60 @@ class HAP_Profile_Admin {
 		foreach ( $fields as $field ) {
 			$field_options[ $field['field_key'] ] = $field['label'];
 		}
+		$suite_active = class_exists( 'HAP_Suite_Module_Fields' ) && HAP_Suite_Module_Fields::table_exists();
 		settings_errors( 'hap_profile' );
 		?>
-		<h2>Profil Modülleri</h2>
+		<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+			<h2 style="margin:0">Profil Modülleri</h2>
+			<?php if ( $suite_active ) : ?>
+			<button type="button" class="button button-primary" id="hap-sync-suite-metadata">
+				Suite Metadata Senkronize Et
+			</button>
+			<button type="button" class="button button-secondary" id="hap-sync-suite-metadata-dry">
+				Önizleme (Dry Run)
+			</button>
+			<span id="hap-sync-suite-meta-result" style="font-size:.85rem;color:#555;max-width:600px"></span>
+			<?php else : ?>
+			<span style="color:#b32d2e;font-size:.85rem">Suite tablosu bulunamadı — senkronizasyon devre dışı.</span>
+			<?php endif; ?>
+		</div>
+		<script>
+		(function($){
+			function doSync(dryRun) {
+				var $btn = dryRun ? $('#hap-sync-suite-metadata-dry') : $('#hap-sync-suite-metadata');
+				var $res = $('#hap-sync-suite-meta-result');
+				$btn.prop('disabled', true).text(dryRun ? 'Önizleniyor...' : 'Senkronize ediliyor...');
+				$res.text('');
+				$.post(hapAdmin.ajaxUrl, {
+					action: 'hap_sync_suite_metadata',
+					nonce: hapAdmin.nonce,
+					dry_run: dryRun ? 1 : 0
+				}, function(resp) {
+					$btn.prop('disabled', false).text(dryRun ? 'Önizleme (Dry Run)' : 'Suite Metadata Senkronize Et');
+					if (resp.success) {
+						var d = resp.data;
+						$res.html(
+							(dryRun ? '<strong>[Dry Run]</strong> ' : '<strong>Tamamlandı.</strong> ') +
+							'Toplam: ' + d.total +
+							' | Güncellendi: ' + d.updated +
+							' | Backend destekli: ' + d.backend_enabled +
+							' | result_enabled kapandı: ' + d.result_disabled +
+							' | pending_adapter: ' + d.pending_adapter +
+							' | Atlandı: ' + d.skipped
+						);
+					} else {
+						$res.html('<span style="color:red">' + (resp.data.message || 'Hata oluştu.') + '</span>');
+					}
+				}).fail(function() {
+					$btn.prop('disabled', false);
+					$res.html('<span style="color:red">Sunucu hatası.</span>');
+				});
+			}
+			$('#hap-sync-suite-metadata').on('click', function(){ doSync(false); });
+			$('#hap-sync-suite-metadata-dry').on('click', function(){ doSync(true); });
+		}(jQuery));
+		</script>
+		<h2 style="margin-top:4px">Modül Listesi</h2>
 		<table class="widefat striped">
 			<thead><tr><th>ID</th><th>Başlık</th><th>Slug</th><th>Durum</th><th>required_fields</th><th>optional_fields</th><th>result_enabled</th><th>onboarding_prompt_enabled</th><th>ai_include</th><th>share_include_default</th></tr></thead>
 			<tbody>

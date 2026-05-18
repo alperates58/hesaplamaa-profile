@@ -681,6 +681,8 @@ class HAP_Profile_Fields {
 			'Ihtiyaci'      => 'İhtiyacı',
 			'Ihtiyacı'      => 'İhtiyacı',
 			'Burc'          => 'Burç',
+			'Sayi'          => 'Sayı',
+			'Es '           => 'Eş ',
 		);
 
 		$title = strtr( $title, $replacements );

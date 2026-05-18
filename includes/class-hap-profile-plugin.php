@@ -87,6 +87,7 @@ class HAP_Profile_Plugin {
 		add_action( 'wp_ajax_hap_delete_module', array( $this->admin, 'ajax_delete_module' ) );
 		add_action( 'wp_ajax_hap_save_single_module', array( $this->admin, 'ajax_save_single_module' ) );
 		add_action( 'wp_ajax_hap_sync_from_suite', array( $this->admin, 'ajax_sync_from_suite' ) );
+		add_action( 'wp_ajax_hap_sync_suite_metadata', array( $this->admin, 'ajax_sync_suite_metadata' ) );
 		add_action( 'wp_ajax_hap_bulk_modules', array( $this->admin, 'ajax_bulk_modules' ) );
 		add_action( 'wp_ajax_hap_apply_runner_presets', array( $this->admin, 'ajax_apply_runner_presets' ) );
 		add_action( 'wp_ajax_hap_inspect_suite_modules', array( $this->admin, 'ajax_inspect_suite_modules' ) );

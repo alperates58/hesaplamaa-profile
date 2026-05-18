@@ -209,7 +209,12 @@ foreach ( $user_shares as $share_item ) {
 				</div>
 				<div class="hap-hero-note">
 					<strong><?php echo esc_html( count( $ready_results ) ); ?> sonuç hazır</strong>
-					<span><?php echo esc_html( count( $frontend_only ) ); ?> bağlantı bekleyen, <?php echo esc_html( count( $missing_results ) ); ?> eksik bilgi isteyen analiz var.</span>
+					<?php $pending_count = count( $frontend_only ); ?>
+					<?php if ( $pending_count > 0 ) : ?>
+					<span><?php echo esc_html( $pending_count ); ?> analiz yakında sonuç üretmeye hazır.</span>
+					<?php elseif ( count( $missing_results ) > 0 ) : ?>
+					<span><?php echo esc_html( count( $missing_results ) ); ?> analiz için ek bilgi gerekiyor.</span>
+					<?php endif; ?>
 				</div>
 			</div>
 		</section>

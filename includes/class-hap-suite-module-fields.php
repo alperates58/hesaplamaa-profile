@@ -158,6 +158,7 @@ class HAP_Suite_Module_Fields {
 
 	/**
 	 * Modül manifest özeti döner.
+	 * backend_supported, ai_useful, is_sensitive için MAX() aggregate kullanır.
 	 *
 	 * @param string $module_slug
 	 * @return array|null
@@ -171,11 +172,16 @@ class HAP_Suite_Module_Fields {
 
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT module_slug, module_title, section, suggested_profile_status,
-				        backend_supported, ai_useful, is_sensitive
+				"SELECT module_slug,
+				        MAX(module_title) AS module_title,
+				        MAX(section) AS section,
+				        MAX(suggested_profile_status) AS suggested_profile_status,
+				        MAX(backend_supported) AS backend_supported,
+				        MAX(ai_useful) AS ai_useful,
+				        MAX(is_sensitive) AS is_sensitive
 				 FROM `{$table}`
 				 WHERE module_slug = %s
-				 LIMIT 1",
+				 GROUP BY module_slug",
 				$module_slug
 			),
 			ARRAY_A
@@ -196,6 +202,7 @@ class HAP_Suite_Module_Fields {
 			'is_sensitive'             => (bool) $row['is_sensitive'],
 			'required_fields'          => self::build_required_fields_for_module( $module_slug, $fields ),
 			'input_mapping'            => self::build_input_mapping_for_module( $module_slug, $fields ),
+			'source'                   => 'suite',
 		);
 	}
 
@@ -379,6 +386,7 @@ class HAP_Suite_Module_Fields {
 
 	/**
 	 * Modüle ait required_fields listesini Suite tablosundan oluşturur.
+	 * hc_ önekli teknik anahtarları ve HAP_Profile_Fields'te bilinmeyen alanları dışarıda bırakır.
 	 *
 	 * @param string     $module_slug
 	 * @param array|null $fields  Önceden çekilmişse verilir.
@@ -388,11 +396,29 @@ class HAP_Suite_Module_Fields {
 		if ( null === $fields ) {
 			$fields = self::get_fields_for_module( $module_slug );
 		}
+
+		$known_fields = array();
+		if ( class_exists( 'HAP_Profile_Fields' ) ) {
+			foreach ( HAP_Profile_Fields::get_fields() as $f ) {
+				$known_fields[] = $f['field_key'];
+			}
+		}
+
 		$required = array();
 		foreach ( $fields as $row ) {
-			if ( ! empty( $row['profile_field'] ) ) {
-				$required[] = sanitize_key( $row['profile_field'] );
+			$pf = sanitize_key( $row['profile_field'] ?? '' );
+			if ( '' === $pf ) {
+				continue;
 			}
+			// hc_ önekli teknik alan anahtarlarını dışla
+			if ( 0 === strpos( $pf, 'hc_' ) ) {
+				continue;
+			}
+			// Yalnızca HAP_Profile_Fields'te tanımlı alanları dahil et
+			if ( ! empty( $known_fields ) && ! in_array( $pf, $known_fields, true ) ) {
+				continue;
+			}
+			$required[] = $pf;
 		}
 		return array_values( array_unique( $required ) );
 	}
