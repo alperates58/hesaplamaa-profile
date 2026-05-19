@@ -175,6 +175,40 @@ class HAP_Profile_Results_Store {
 		return $normalized;
 	}
 
+	/**
+	 * Kullanıcının tüm hesaplanmış sonuçlarını getir.
+	 *
+	 * @param int $user_id
+	 * @return array  [ 'module_slug' => result_array ]
+	 */
+	public static function get_all_results( $user_id ) {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE;
+		
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT `module_slug`, `normalized_result`, `result_json`, `status` FROM `{$table}` WHERE `user_id` = %d AND (`status` = 'ready_result' OR `status` = 'completed')",
+				(int) $user_id
+			),
+			ARRAY_A
+		);
+		
+		$results = array();
+		if ( ! empty( $rows ) ) {
+			foreach ( $rows as $row ) {
+				$normalized = json_decode( $row['normalized_result'], true );
+				if ( ! is_array( $normalized ) ) {
+					$normalized = json_decode( $row['result_json'], true );
+				}
+				if ( is_array( $normalized ) ) {
+					$results[ $row['module_slug'] ] = $normalized;
+				}
+			}
+		}
+		
+		return $results;
+	}
+
 	// -------------------------------------------------------
 	// Yazma
 	// -------------------------------------------------------

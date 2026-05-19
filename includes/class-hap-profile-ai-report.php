@@ -54,8 +54,7 @@ class HAP_Profile_AI_Report {
 		if ( ! class_exists( 'HAP_Profile_Results_Store' ) ) {
 			return array();
 		}
-		$store = new HAP_Profile_Results_Store();
-		return $store->get_all_results( $user_id );
+		return HAP_Profile_Results_Store::get_all_results( $user_id );
 	}
 
 	public function categorize_results( $results ) {
