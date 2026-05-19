@@ -357,12 +357,12 @@ class HAP_Profile_AI_Report {
 		$status = get_user_meta( $user_id, '_hap_ai_report_status', true );
 		$lock = get_user_meta( $user_id, '_hap_ai_report_lock', true );
 		
-		// Fallback: Eğer WP-Cron çalışmamışsa ve lock > 60 saniye ise, arka planda hemen çalıştır.
-		// Sadece kuyruktaysa bunu yapabiliriz, process ediliyorsa biraz daha bekleyelim.
-		if ( 'queued' === $status && $lock && ( time() - $lock > 60 ) ) {
-			// Senkron olarak dene
-			$this->process_report_job( $user_id, $job_id );
-			$status = get_user_meta( $user_id, '_hap_ai_report_status', true );
+		// Fallback: Eğer WP-Cron tetiklenmemişse (örneğin siteye hit azsa), manuel olarak cron'u dürtelim.
+		// Asla senkron (process_report_job) çalıştırmıyoruz, aksi halde Cloudflare 524 veya PHP max_execution_time hatası alırız.
+		if ( 'queued' === $status && $lock && ( time() - $lock > 45 ) ) {
+			if ( function_exists( 'spawn_cron' ) ) {
+				spawn_cron();
+			}
 		}
 
 		if ( 'completed' === $status ) {
@@ -390,6 +390,11 @@ class HAP_Profile_AI_Report {
 	}
 
 	public function process_report_job( $user_id, $job_id ) {
+		// Prevent PHP from killing the background job if the DeepSeek API takes a long time
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 300 );
+		}
+
 		$current_job_id = get_user_meta( $user_id, '_hap_ai_report_job', true );
 		if ( $current_job_id !== $job_id ) {
 			return; // Job iptal edilmiş veya değişmiş
