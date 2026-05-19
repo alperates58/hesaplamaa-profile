@@ -1023,10 +1023,6 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 					<?php endif; ?>
 				</section>
 
-				<section class="hap-analysis-panel" data-analysis-panel="advanced" id="hap-analysis-panel-advanced">
-					<span class="screen-reader-text">Geli&#351;mi&#351; analiz motoru haz&#305;rlan&#305;yor.</span>
-					<div class="hap-analysis-panel-head">
-						<div>
 				<section class="hap-analysis-panel" data-analysis-panel="ai" id="hap-analysis-panel-ai">
 					<div class="hap-section-heading" style="margin-bottom:1.5rem;">
 						<div>
@@ -1044,9 +1040,24 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 								<p style="color:var(--hap-text-light);margin-bottom:1.5rem;max-width:500px;margin-left:auto;margin-right:auto;">
 									AI asistanımız, tüm verilerini harmanlayarak sana özel, kapsamlı bir okuma hazırlayacak. 
 									<br><br>
-									<strong style="color:var(--hap-danger);">Önemli Not:</strong> Bu rapor tıbbi teşhis, tedavi veya kesin bir kader öngörüsü değildir.
+									<strong style="color:var(--hap-danger);">Önemli Not:</strong> Bu rapor tıbbi teşhis, tedavi veya kesin bir kader öngörüsü değildir. Sadece bilgilendirme amaçlıdır.
 								</p>
-								<button type="button" class="hap-btn hap-btn-primary" id="hap-generate-ai-btn">AI Analizimi Oluştur</button>
+								
+								<?php
+								$has_consent = class_exists( 'HAP_Profile_Consents' ) ? HAP_Profile_Consents::has_ai_consent( $user_id ) : false;
+								if ( ! $has_consent ) :
+								?>
+									<div class="hap-ai-consent-box" style="margin-bottom:1.5rem;text-align:left;background:#f9fafb;padding:1rem;border-radius:8px;border:1px solid #e5e7eb;max-width:500px;margin-left:auto;margin-right:auto;">
+										<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--hap-text);">
+											<input type="checkbox" id="hap-ai-consent-checkbox" style="margin-top:3px;">
+											<span>Verilerimin (profil bilgilerim ve analiz sonuçlarım) kişisel analiz raporu oluşturulması amacıyla yapay zeka servisine (DeepSeek) aktarılmasını ve işlenmesini açık rızam ile kabul ediyorum.</span>
+										</label>
+									</div>
+									<button type="button" class="hap-btn hap-btn-primary" id="hap-generate-ai-btn" disabled style="opacity:0.6;cursor:not-allowed;">AI Analizimi Oluştur</button>
+								<?php else : ?>
+									<button type="button" class="hap-btn hap-btn-primary" id="hap-generate-ai-btn">AI Analizimi Oluştur</button>
+								<?php endif; ?>
+								
 								<div class="hap-ai-loading" id="hap-ai-loading" style="display:none;margin-top:1rem;color:var(--hap-text-light);">
 									Analizin hazırlanıyor, lütfen bekleyin... <span class="hap-spinner"></span>
 								</div>

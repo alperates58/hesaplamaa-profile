@@ -16,11 +16,22 @@
 		},
 
 		initAI: function() {
+			$(document).on('change', '#hap-ai-consent-checkbox', function() {
+				var isChecked = $(this).is(':checked');
+				var $btn = $('#hap-generate-ai-btn');
+				if (isChecked) {
+					$btn.prop('disabled', false).css({'opacity': '1', 'cursor': 'pointer'});
+				} else {
+					$btn.prop('disabled', true).css({'opacity': '0.6', 'cursor': 'not-allowed'});
+				}
+			});
+
 			$(document).on('click', '#hap-generate-ai-btn', function() {
 				var $btn = $(this);
 				var $loading = $('#hap-ai-loading');
 				var $content = $('#hap-ai-report-content');
 				var force = $btn.data('force') ? 1 : 0;
+				var aiConsent = $('#hap-ai-consent-checkbox').length && $('#hap-ai-consent-checkbox').is(':checked') ? 1 : 0;
 				
 				$btn.prop('disabled', true);
 				$loading.show();
@@ -28,7 +39,8 @@
 				$.post(hapProfile.ajaxUrl, {
 					action: 'hap_generate_ai_report',
 					nonce: hapProfile.nonce,
-					force_regenerate: force
+					force_regenerate: force,
+					ai_consent: aiConsent
 				}, function(res) {
 					$loading.hide();
 					if (res.success) {

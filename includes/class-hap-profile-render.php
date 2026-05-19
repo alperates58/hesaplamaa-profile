@@ -631,6 +631,10 @@ class HAP_Profile_Render {
 			wp_send_json_error( array( 'message' => 'AI modülü yüklenmemiş.' ) );
 		}
 
+		if ( ! empty( $_POST['ai_consent'] ) && class_exists( 'HAP_Profile_Consents' ) ) {
+			HAP_Profile_Consents::save_consent( $user_id, HAP_Profile_Consents::get_ai_consent_type(), true );
+		}
+
 		$force = ! empty( $_POST['force_regenerate'] );
 		$report_engine = new HAP_Profile_AI_Report();
 		$result = $report_engine->generate_report( $user_id, $force );
