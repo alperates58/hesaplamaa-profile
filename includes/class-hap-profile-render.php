@@ -618,7 +618,7 @@ class HAP_Profile_Render {
 		return $robots;
 	}
 
-	public function handle_generate_ai_report() {
+	public function handle_start_ai_report_job() {
 		check_ajax_referer( 'hap_profile_nonce', 'nonce' );
 
 		if ( ! is_user_logged_in() ) {
@@ -637,12 +637,57 @@ class HAP_Profile_Render {
 
 		$force = ! empty( $_POST['force_regenerate'] );
 		$report_engine = new HAP_Profile_AI_Report();
-		$result = $report_engine->generate_report( $user_id, $force );
+		$result = $report_engine->start_report_job( $user_id, $force );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message(), 'code' => $result->get_error_code() ) );
 		}
 
-		wp_send_json_success( $result );
+		if ( ! empty( $result['success'] ) ) {
+			wp_send_json_success( $result );
+		} else {
+			wp_send_json_error( $result );
+		}
+	}
+
+	public function handle_get_ai_report_status() {
+		check_ajax_referer( 'hap_profile_nonce', 'nonce' );
+
+		if ( ! is_user_logged_in() ) {
+			wp_send_json_error( array( 'message' => 'Giriş yapmanız gerekiyor.' ) );
+		}
+
+		$user_id = get_current_user_id();
+		$job_id  = sanitize_text_field( $_POST['job_id'] ?? '' );
+		
+		if ( ! $job_id ) {
+			wp_send_json_error( array( 'message' => 'Job ID eksik.' ) );
+		}
+
+		if ( ! class_exists( 'HAP_Profile_AI_Report' ) ) {
+			wp_send_json_error( array( 'message' => 'AI modülü yüklenmemiş.' ) );
+		}
+
+		$report_engine = new HAP_Profile_AI_Report();
+		$result = $report_engine->get_report_status( $user_id, $job_id );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message(), 'code' => $result->get_error_code() ) );
+		}
+
+		if ( ! empty( $result['success'] ) ) {
+			wp_send_json_success( $result );
+		} else {
+			wp_send_json_error( $result );
+		}
+	}
+
+	public function handle_process_ai_report_job( $user_id, $job_id ) {
+		if ( ! class_exists( 'HAP_Profile_AI_Report' ) ) {
+			return;
+		}
+
+		$report_engine = new HAP_Profile_AI_Report();
+		$report_engine->process_report_job( $user_id, $job_id );
 	}
 }

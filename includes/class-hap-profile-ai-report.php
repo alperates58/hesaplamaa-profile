@@ -193,13 +193,15 @@ class HAP_Profile_AI_Report {
 			'max_tokens'  => $max_tokens,
 		);
 
+		$timeout = absint( $settings['ds_api_timeout'] ?? 180 );
+
 		$response = wp_remote_post( 'https://api.deepseek.com/chat/completions', array(
 			'headers' => array(
 				'Content-Type'  => 'application/json',
 				'Authorization' => 'Bearer ' . $api_key,
 			),
 			'body'    => wp_json_encode( $body ),
-			'timeout' => 45,
+			'timeout' => $timeout,
 		) );
 
 		if ( is_wp_error( $response ) ) {
@@ -217,13 +219,24 @@ class HAP_Profile_AI_Report {
 		return $data['choices'][0]['message']['content'];
 	}
 
-	public function generate_report( $user_id, $force_regenerate = false ) {
+	public function start_report_job( $user_id, $force_regenerate = false ) {
 		if ( ! $this->is_enabled() ) {
 			return new WP_Error( 'ai_disabled', 'AI özelliği kapalı.' );
 		}
 
 		if ( ! $this->user_has_ai_consent( $user_id ) ) {
 			return new WP_Error( 'no_consent', 'AI kişisel analiz için yapay zeka işleme izni gerekiyor. Lütfen profil ayarlarından onayı tamamlayın.' );
+		}
+
+		// Check if there is already a processing job
+		$status = get_user_meta( $user_id, '_hap_ai_report_status', true );
+		$lock = get_user_meta( $user_id, '_hap_ai_report_lock', true );
+		
+		if ( in_array( $status, array( 'queued', 'processing' ), true ) ) {
+			// Lock süresi dolmuş mu? (15 dakika = 900 saniye)
+			if ( $lock && ( time() - $lock < 900 ) ) {
+				return new WP_Error( 'already_processing', 'AI raporun zaten hazırlanıyor. Lütfen tamamlanmasını bekleyin.' );
+			}
 		}
 
 		$settings = $this->get_settings();
@@ -242,25 +255,125 @@ class HAP_Profile_AI_Report {
 			$cached = $this->get_cached_report( $user_id, $hash );
 			if ( $cached ) {
 				return array(
-					'report' => $cached,
-					'cached' => true,
+					'success' => true,
+					'status'  => 'completed',
+					'cached'  => true,
+					'report'  => $cached,
 				);
 			}
 		}
 
-		$messages = $this->build_prompt( $user_id, $profile, $categorized, $settings );
-		$report = $this->call_deepseek( $messages );
-
-		if ( is_wp_error( $report ) ) {
-			return $report;
-		}
-
-		$this->save_cached_report( $user_id, $hash, $report );
+		// Yeni job oluştur
+		$job_id = uniqid( 'ai_', true );
+		
+		update_user_meta( $user_id, '_hap_ai_report_job', $job_id );
+		update_user_meta( $user_id, '_hap_ai_report_status', 'queued' );
+		update_user_meta( $user_id, '_hap_ai_report_hash', $hash );
+		update_user_meta( $user_id, '_hap_ai_report_lock', time() );
+		update_user_meta( $user_id, '_hap_ai_report_started_at', current_time( 'mysql' ) );
+		delete_user_meta( $user_id, '_hap_ai_report_error' );
+		delete_user_meta( $user_id, '_hap_ai_report_completed_at' );
+		
+		// WP-Cron'u tetikle
+		wp_schedule_single_event( time() + 2, 'hap_process_ai_report_job', array( $user_id, $job_id ) );
 
 		return array(
-			'report' => $report,
-			'cached' => false,
+			'success' => true,
+			'job_id'  => $job_id,
+			'status'  => 'queued',
+			'message' => 'AI raporun hazırlanıyor.',
 		);
+	}
+
+	public function get_report_status( $user_id, $job_id ) {
+		$current_job_id = get_user_meta( $user_id, '_hap_ai_report_job', true );
+		
+		if ( $current_job_id !== $job_id ) {
+			return new WP_Error( 'invalid_job', 'Geçersiz job ID veya yeni bir job başlatıldı.' );
+		}
+
+		$status = get_user_meta( $user_id, '_hap_ai_report_status', true );
+		$lock = get_user_meta( $user_id, '_hap_ai_report_lock', true );
+		
+		// Fallback: Eğer WP-Cron çalışmamışsa ve lock > 60 saniye ise, arka planda hemen çalıştır.
+		// Sadece kuyruktaysa bunu yapabiliriz, process ediliyorsa biraz daha bekleyelim.
+		if ( 'queued' === $status && $lock && ( time() - $lock > 60 ) ) {
+			// Senkron olarak dene
+			$this->process_report_job( $user_id, $job_id );
+			$status = get_user_meta( $user_id, '_hap_ai_report_status', true );
+		}
+
+		if ( 'completed' === $status ) {
+			$hash = get_user_meta( $user_id, '_hap_ai_report_hash', true );
+			return array(
+				'success'      => true,
+				'status'       => 'completed',
+				'report'       => $this->get_cached_report( $user_id, $hash ),
+				'generated_at' => get_user_meta( $user_id, '_hap_ai_report_completed_at', true ),
+			);
+		} elseif ( 'failed' === $status ) {
+			$error = get_user_meta( $user_id, '_hap_ai_report_error', true );
+			return array(
+				'success' => false,
+				'status'  => 'failed',
+				'message' => $error ?: 'AI raporu oluşturulamadı. Lütfen daha sonra tekrar deneyin.',
+			);
+		} else {
+			return array(
+				'success' => true,
+				'status'  => $status, // queued, processing
+				'message' => 'Raporun hazırlanıyor...',
+			);
+		}
+	}
+
+	public function process_report_job( $user_id, $job_id ) {
+		$current_job_id = get_user_meta( $user_id, '_hap_ai_report_job', true );
+		if ( $current_job_id !== $job_id ) {
+			return; // Job iptal edilmiş veya değişmiş
+		}
+
+		$status = get_user_meta( $user_id, '_hap_ai_report_status', true );
+		if ( 'completed' === $status ) {
+			return; // Zaten bitmiş
+		}
+
+		update_user_meta( $user_id, '_hap_ai_report_status', 'processing' );
+		update_user_meta( $user_id, '_hap_ai_report_lock', time() );
+
+		$settings = $this->get_settings();
+		$profile = $this->collect_profile_context( $user_id );
+		
+		if ( is_wp_error( $profile ) ) {
+			$this->mark_job_failed( $user_id, $profile->get_error_message() );
+			return;
+		}
+
+		$results = $this->collect_ready_results( $user_id );
+		$categorized = $this->categorize_results( $results );
+
+		$hash = get_user_meta( $user_id, '_hap_ai_report_hash', true );
+		
+		try {
+			$messages = $this->build_prompt( $user_id, $profile, $categorized, $settings );
+			$report = $this->call_deepseek( $messages );
+
+			if ( is_wp_error( $report ) ) {
+				$this->mark_job_failed( $user_id, $report->get_error_message() );
+			} else {
+				$this->save_cached_report( $user_id, $hash, $report );
+				update_user_meta( $user_id, '_hap_ai_report_status', 'completed' );
+				update_user_meta( $user_id, '_hap_ai_report_completed_at', current_time( 'mysql' ) );
+			}
+		} catch ( Exception $e ) {
+			$this->mark_job_failed( $user_id, 'Beklenmeyen bir hata oluştu: ' . $e->getMessage() );
+		}
+	}
+
+	private function mark_job_failed( $user_id, $error_message ) {
+		update_user_meta( $user_id, '_hap_ai_report_status', 'failed' );
+		update_user_meta( $user_id, '_hap_ai_report_error', $error_message );
+		update_user_meta( $user_id, '_hap_ai_report_lock', 0 ); // Lock'u serbest bırak
 	}
 
 	public function get_cached_report( $user_id, $hash ) {

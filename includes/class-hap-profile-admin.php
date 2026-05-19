@@ -1127,6 +1127,7 @@ class HAP_Profile_Admin {
 		$settings['ds_model']          = sanitize_text_field( $_POST['ds_model'] ?? 'deepseek-v4-flash' );
 		$settings['ds_temperature']    = (float) ( $_POST['ds_temperature'] ?? 0.7 );
 		$settings['ds_max_tokens']     = absint( $_POST['ds_max_tokens'] ?? 6000 );
+		$settings['ds_api_timeout']    = absint( $_POST['ds_api_timeout'] ?? 180 );
 		$settings['ds_cache_active']   = ! empty( $_POST['ds_cache_active'] ) ? 1 : 0;
 		
 		$settings['ds_tone']           = sanitize_text_field( $_POST['ds_tone'] ?? 'Dost canlısı' );
@@ -1189,6 +1190,13 @@ class HAP_Profile_Admin {
 					<th>Max Output Tokens</th>
 					<td>
 						<input type="number" step="100" min="1000" max="8000" name="ds_max_tokens" value="<?php echo esc_attr( $settings['ds_max_tokens'] ?? 6000 ); ?>" style="width:100px">
+					</td>
+				</tr>
+				<tr>
+					<th>API Timeout (Saniye)</th>
+					<td>
+						<input type="number" step="1" min="30" max="300" name="ds_api_timeout" value="<?php echo esc_attr( $settings['ds_api_timeout'] ?? 180 ); ?>" style="width:100px">
+						<p class="description">İdeal olarak 180. Büyük raporlar için 300'e kadar çıkarılabilir.</p>
 					</td>
 				</tr>
 				<tr>

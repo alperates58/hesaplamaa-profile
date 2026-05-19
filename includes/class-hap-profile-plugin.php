@@ -123,8 +123,13 @@ class HAP_Profile_Plugin {
 		// Final step — Beni sonuçlarıma götür
 		add_action( 'wp_ajax_hap_generate_profile_results', array( $this->onboarding, 'handle_generate_results' ) );
 		
-		// AI Kişisel Analiz
-		add_action( 'wp_ajax_hap_generate_ai_report', array( $this->render, 'handle_generate_ai_report' ) );
+		// AI Kişisel Analiz (Queue/Polling System)
+		add_action( 'wp_ajax_hap_start_ai_report_job', array( $this->render, 'handle_start_ai_report_job' ) );
+		add_action( 'wp_ajax_hap_get_ai_report_status', array( $this->render, 'handle_get_ai_report_status' ) );
+		add_action( 'wp_ajax_hap_generate_ai_report', array( $this->render, 'handle_start_ai_report_job' ) ); // Backward compatibility
+		
+		// WP-Cron Worker
+		add_action( 'hap_process_ai_report_job', array( $this->render, 'handle_process_ai_report_job' ), 10, 2 );
 	}
 
 	public function load_textdomain() {

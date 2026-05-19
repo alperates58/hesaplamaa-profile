@@ -957,7 +957,12 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 					</div>
 
 					<div class="hap-ai-report-container" style="background:#fff;border:1px solid var(--hap-border);border-radius:12px;padding:2rem;">
-						<div class="hap-ai-report-content" id="hap-ai-report-content">
+						<?php
+						$ai_status = get_user_meta( $user_id, '_hap_ai_report_status', true );
+						$ai_job    = get_user_meta( $user_id, '_hap_ai_report_job', true );
+						$is_active = in_array( $ai_status, array( 'queued', 'processing' ), true );
+						?>
+						<div class="hap-ai-report-content" id="hap-ai-report-content" <?php echo $is_active ? 'data-active-job="' . esc_attr( $ai_job ) . '"' : ''; ?>>
 							<div style="text-align:center;padding:2rem 0;">
 								<div style="font-size:3rem;margin-bottom:1rem;">🤖</div>
 								<h3 style="margin-bottom:0.5rem;font-size:1.25rem;">Analizin Hazır Bekliyor</h3>
@@ -983,7 +988,7 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 								<?php endif; ?>
 								
 								<div class="hap-ai-loading" id="hap-ai-loading" style="display:none;margin-top:1rem;color:var(--hap-text-light);">
-									Analizin hazırlanıyor, lütfen bekleyin... <span class="hap-spinner"></span>
+									<span class="hap-ai-loading-text">Analizin hazırlanıyor, lütfen bekleyin...</span> <span class="hap-spinner"></span>
 								</div>
 							</div>
 						</div>

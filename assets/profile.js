@@ -16,6 +16,63 @@
 		},
 
 		initAI: function() {
+			var pollingInterval = null;
+
+			function parseReportHTML(report) {
+				report = report.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+				report = report.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+				report = report.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+				report = report.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+				report = report.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+				report = report.replace(/\n/gim, '<br>');
+				return report;
+			}
+
+			function pollReportStatus(job_id, $btn, $content, $loading) {
+				pollingInterval = setInterval(function() {
+					$.post(hapProfile.ajaxUrl, {
+						action: 'hap_get_ai_report_status',
+						nonce: hapProfile.nonce,
+						job_id: job_id
+					}, function(res) {
+						if (res.success) {
+							if (res.data.status === 'completed') {
+								clearInterval(pollingInterval);
+								$loading.hide();
+								var report = parseReportHTML(res.data.report);
+								var html = '<div class="hap-ai-result" style="text-align:left;line-height:1.6;font-size:1.05rem;">' + report + '</div>';
+								if (res.data.generated_at) {
+									html += '<p style="font-size:0.8rem;color:#888;margin-top:20px;text-align:center;">Oluşturulma Tarihi: ' + res.data.generated_at + '</p>';
+								}
+								html += '<div style="text-align:center;margin-top:30px;"><button class="hap-btn hap-btn-secondary" id="hap-generate-ai-btn" data-force="1">Yeniden Oluştur</button></div>';
+								$content.html(html);
+							} else if (res.data.status === 'failed') {
+								clearInterval(pollingInterval);
+								$loading.hide();
+								var msg = res.data.message || 'AI raporu oluşturulamadı.';
+								$content.html('<div style="text-align:center;color:#dc3545;padding:20px;">' + msg + '<br><br><button class="hap-btn hap-btn-secondary" id="hap-generate-ai-btn" data-force="1">Tekrar Dene</button></div>');
+								$btn.prop('disabled', false);
+							} else {
+								// queued veya processing
+								$content.find('.hap-ai-loading-text').text(res.data.message || 'Raporun hazırlanıyor, lütfen sayfadan ayrılmayın...');
+							}
+						} else {
+							clearInterval(pollingInterval);
+							$loading.hide();
+							var msg = res.data && res.data.message ? res.data.message : 'Bir hata oluştu.';
+							$content.html('<div style="text-align:center;color:#dc3545;padding:20px;">' + msg + '<br><br><button class="hap-btn hap-btn-secondary" id="hap-generate-ai-btn" data-force="1">Tekrar Dene</button></div>');
+							$btn.prop('disabled', false);
+						}
+					}).fail(function() {
+						// Tek seferlik AJAX fail durumunda hemen intervali kapatmamak iyi olabilir ama şimdilik kapatalım
+						clearInterval(pollingInterval);
+						$loading.hide();
+						$content.html('<div style="text-align:center;color:#dc3545;padding:20px;">Sunucu ile iletişim kurulamadı.<br><br><button class="hap-btn hap-btn-secondary" id="hap-generate-ai-btn" data-force="1">Tekrar Dene</button></div>');
+						$btn.prop('disabled', false);
+					});
+				}, 4000);
+			}
+
 			$(document).on('change', '#hap-ai-consent-checkbox', function() {
 				var isChecked = $(this).is(':checked');
 				var $btn = $('#hap-generate-ai-btn');
@@ -35,32 +92,33 @@
 				
 				$btn.prop('disabled', true);
 				$loading.show();
+				$content.find('.hap-ai-loading-text').text('AI raporun hazırlanıyor. Bu işlem detay seviyesine göre birkaç dakika sürebilir...');
+
+				if (pollingInterval) {
+					clearInterval(pollingInterval);
+				}
 
 				$.post(hapProfile.ajaxUrl, {
-					action: 'hap_generate_ai_report',
+					action: 'hap_start_ai_report_job',
 					nonce: hapProfile.nonce,
 					force_regenerate: force,
 					ai_consent: aiConsent
 				}, function(res) {
-					$loading.hide();
 					if (res.success) {
-						var report = res.data.report;
-						// Basit markdown to HTML parse
-						report = report.replace(/^### (.*$)/gim, '<h4>$1</h4>');
-						report = report.replace(/^## (.*$)/gim, '<h3>$1</h3>');
-						report = report.replace(/^# (.*$)/gim, '<h2>$1</h2>');
-						report = report.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
-						report = report.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-						report = report.replace(/\n/gim, '<br>');
-						
-						var html = '<div class="hap-ai-result" style="text-align:left;line-height:1.6;font-size:1.05rem;">' + report + '</div>';
-						if (res.data.cached) {
+						if (res.data.status === 'completed') {
+							// Cache'den geldiyse direkt yazdır
+							$loading.hide();
+							var report = parseReportHTML(res.data.report);
+							var html = '<div class="hap-ai-result" style="text-align:left;line-height:1.6;font-size:1.05rem;">' + report + '</div>';
 							html += '<p style="font-size:0.8rem;color:#888;margin-top:20px;text-align:center;">Önbellekten yüklendi.</p>';
+							html += '<div style="text-align:center;margin-top:30px;"><button class="hap-btn hap-btn-secondary" id="hap-generate-ai-btn" data-force="1">Yeniden Oluştur</button></div>';
+							$content.html(html);
+						} else {
+							// Queued/processing: polling başlat
+							pollReportStatus(res.data.job_id, $btn, $content, $loading);
 						}
-						html += '<div style="text-align:center;margin-top:30px;"><button class="hap-btn hap-btn-secondary" id="hap-generate-ai-btn" data-force="1">Yeniden Oluştur</button></div>';
-						
-						$content.html(html);
 					} else {
+						$loading.hide();
 						var msg = res.data && res.data.message ? res.data.message : 'Bir hata oluştu.';
 						alert('Hata: ' + msg);
 						$btn.prop('disabled', false);
@@ -71,6 +129,18 @@
 					$btn.prop('disabled', false);
 				});
 			});
+
+			// Sayfa yüklendiğinde aktif bir job varsa polling'i başlat
+			var $contentContainer = $('#hap-ai-report-content');
+			var activeJobId = $contentContainer.data('active-job');
+			if (activeJobId) {
+				var $btn = $('#hap-generate-ai-btn');
+				var $loading = $('#hap-ai-loading');
+				$btn.prop('disabled', true);
+				$loading.show();
+				$contentContainer.find('.hap-ai-loading-text').text('AI raporun hazırlanıyor. Sayfayı yenilediniz, işleme devam ediliyor...');
+				pollReportStatus(activeJobId, $btn, $contentContainer, $loading);
+			}
 		},
 
 		initFormTabs: function () {
