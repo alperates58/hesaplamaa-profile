@@ -617,4 +617,28 @@ class HAP_Profile_Render {
 
 		return $robots;
 	}
+
+	public function handle_generate_ai_report() {
+		check_ajax_referer( 'hap_profile_nonce', 'nonce' );
+
+		if ( ! is_user_logged_in() ) {
+			wp_send_json_error( array( 'message' => 'Giriş yapmanız gerekiyor.' ) );
+		}
+
+		$user_id = get_current_user_id();
+		
+		if ( ! class_exists( 'HAP_Profile_AI_Report' ) ) {
+			wp_send_json_error( array( 'message' => 'AI modülü yüklenmemiş.' ) );
+		}
+
+		$force = ! empty( $_POST['force_regenerate'] );
+		$report_engine = new HAP_Profile_AI_Report();
+		$result = $report_engine->generate_report( $user_id, $force );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message(), 'code' => $result->get_error_code() ) );
+		}
+
+		wp_send_json_success( $result );
+	}
 }

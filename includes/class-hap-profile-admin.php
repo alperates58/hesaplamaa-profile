@@ -32,6 +32,7 @@ class HAP_Profile_Admin {
 			'modules'      => 'Profil Modülleri',
 			'preset'       => 'Gelecek Modül Presetleri',
 			'ai_templates' => 'AI Yorum Şablonları',
+			'ai_deepseek'  => 'DeepSeek AI',
 			'share'        => 'Paylaşım Ayarları',
 			'auth'         => 'Üyelik ve Güvenlik',
 			'updater'      => 'GitHub Güncelleme',
@@ -106,6 +107,9 @@ class HAP_Profile_Admin {
 					case 'ai_templates':
 						$this->render_ai_templates_tab();
 						break;
+					case 'ai_deepseek':
+						$this->render_ai_deepseek_tab();
+						break;
 					case 'share':
 						$this->render_share_tab();
 						break;
@@ -151,6 +155,9 @@ class HAP_Profile_Admin {
 				break;
 			case 'save_module_inline':
 				$this->save_module_inline();
+				break;
+			case 'save_ai_deepseek':
+				$this->save_ai_deepseek_settings();
 				break;
 		}
 	}
@@ -1108,5 +1115,233 @@ class HAP_Profile_Admin {
 
 		$this->modules->save_module( array_merge( $existing, array( 'profile_status' => $profile_status ) ), (int) $existing['id'] );
 		wp_send_json_success( array( 'message' => 'Durum güncellendi.', 'profile_status' => $profile_status ) );
+	}
+
+	private function save_ai_deepseek_settings() {
+		$settings = get_option( 'hap_profile_settings', array() );
+		
+		$settings['ds_ai_active'] = ! empty( $_POST['ds_ai_active'] ) ? 1 : 0;
+		if ( ! empty( $_POST['ds_api_key'] ) ) { // Don't overwrite if empty (password field)
+			$settings['ds_api_key'] = sanitize_text_field( $_POST['ds_api_key'] );
+		}
+		$settings['ds_model']          = sanitize_text_field( $_POST['ds_model'] ?? 'deepseek-v4-flash' );
+		$settings['ds_temperature']    = (float) ( $_POST['ds_temperature'] ?? 0.7 );
+		$settings['ds_max_tokens']     = absint( $_POST['ds_max_tokens'] ?? 6000 );
+		$settings['ds_cache_active']   = ! empty( $_POST['ds_cache_active'] ) ? 1 : 0;
+		
+		$settings['ds_tone']           = sanitize_text_field( $_POST['ds_tone'] ?? 'Dost canlısı' );
+		$settings['ds_detail']         = sanitize_text_field( $_POST['ds_detail'] ?? 'Çok detaylı' );
+		$settings['ds_length']         = sanitize_text_field( $_POST['ds_length'] ?? '2500-3500 kelime' );
+		$settings['ds_min_paragraphs'] = absint( $_POST['ds_min_paragraphs'] ?? 4 );
+		
+		$settings['ds_use_name']       = ! empty( $_POST['ds_use_name'] ) ? 1 : 0;
+		$settings['ds_single_results'] = ! empty( $_POST['ds_single_results'] ) ? 1 : 0;
+		$settings['ds_use_headers']    = ! empty( $_POST['ds_use_headers'] ) ? 1 : 0;
+		$settings['ds_add_tips']       = ! empty( $_POST['ds_add_tips'] ) ? 1 : 0;
+		$settings['ds_custom_prompt']  = sanitize_textarea_field( wp_unslash( $_POST['ds_custom_prompt'] ?? '' ) );
+		
+		update_option( 'hap_profile_settings', $settings );
+		add_settings_error( 'hap_profile', 'saved', 'DeepSeek AI ayarları kaydedildi.', 'updated' );
+	}
+
+	private function render_ai_deepseek_tab() {
+		$settings = get_option( 'hap_profile_settings', array() );
+		$has_api_key = ! empty( $settings['ds_api_key'] );
+		settings_errors( 'hap_profile' );
+		?>
+		<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+			<h2 style="margin:0">DeepSeek AI Ayarları</h2>
+			<button type="button" class="button button-secondary" id="hap-test-deepseek">Test Bağlantısı</button>
+			<span id="hap-test-deepseek-result" style="font-size:0.9em;margin-left:8px;"></span>
+		</div>
+		<form method="post">
+			<?php wp_nonce_field( 'hap_admin_action', 'hap_nonce' ); ?>
+			<input type="hidden" name="hap_action" value="save_ai_deepseek">
+			
+			<table class="form-table">
+				<tr>
+					<th>AI Aktif</th>
+					<td><label><input type="checkbox" name="ds_ai_active" value="1" <?php checked( ! empty( $settings['ds_ai_active'] ) ); ?>> Uygulamada AI Analiz özelliğini aç</label></td>
+				</tr>
+				<tr>
+					<th>DeepSeek API Key</th>
+					<td>
+						<input type="password" name="ds_api_key" class="regular-text" placeholder="<?php echo $has_api_key ? '********' : 'sk-...'; ?>">
+						<p class="description">Değiştirmek istemiyorsanız boş bırakın. Güvenlik için arayüzde gösterilmez.</p>
+					</td>
+				</tr>
+				<tr>
+					<th>Model</th>
+					<td>
+						<select name="ds_model">
+							<option value="deepseek-v4-flash" <?php selected( ( $settings['ds_model'] ?? '' ), 'deepseek-v4-flash' ); ?>>deepseek-v4-flash</option>
+							<option value="deepseek-v4-pro" <?php selected( ( $settings['ds_model'] ?? '' ), 'deepseek-v4-pro' ); ?>>deepseek-v4-pro</option>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th>Temperature</th>
+					<td>
+						<input type="number" step="0.1" min="0" max="2" name="ds_temperature" value="<?php echo esc_attr( $settings['ds_temperature'] ?? 0.7 ); ?>" style="width:80px">
+					</td>
+				</tr>
+				<tr>
+					<th>Max Output Tokens</th>
+					<td>
+						<input type="number" step="100" min="1000" max="8000" name="ds_max_tokens" value="<?php echo esc_attr( $settings['ds_max_tokens'] ?? 6000 ); ?>" style="width:100px">
+					</td>
+				</tr>
+				<tr>
+					<th>Önbellek (Cache)</th>
+					<td>
+						<label><input type="checkbox" name="ds_cache_active" value="1" <?php checked( ! isset( $settings['ds_cache_active'] ) || ! empty( $settings['ds_cache_active'] ) ); ?>> Sonuçlar değişene kadar aynı raporu cache'den getir (API maliyetini düşürür)</label>
+					</td>
+				</tr>
+			</table>
+
+			<hr>
+			<h3>AI Yazım Ayarları (Parametrik Yönergeler)</h3>
+			<table class="form-table">
+				<tr>
+					<th>Yazım Tonu</th>
+					<td>
+						<select name="ds_tone">
+							<?php
+							$tones = array( 'Dost canlısı', 'Profesyonel', 'Sade ve net', 'Spiritüel ama yumuşak' );
+							foreach ( $tones as $t ) {
+								echo '<option value="' . esc_attr( $t ) . '" ' . selected( ( $settings['ds_tone'] ?? 'Dost canlısı' ), $t, false ) . '>' . esc_html( $t ) . '</option>';
+							}
+							?>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th>Detay Seviyesi</th>
+					<td>
+						<select name="ds_detail">
+							<?php
+							$details = array( 'Kısa', 'Orta', 'Detaylı', 'Çok detaylı' );
+							foreach ( $details as $d ) {
+								echo '<option value="' . esc_attr( $d ) . '" ' . selected( ( $settings['ds_detail'] ?? 'Çok detaylı' ), $d, false ) . '>' . esc_html( $d ) . '</option>';
+							}
+							?>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th>Rapor Uzunluğu Hedefi</th>
+					<td>
+						<select name="ds_length">
+							<?php
+							$lengths = array( '800-1200 kelime', '1500-2200 kelime', '2500-3500 kelime', '4000+ kelime' );
+							foreach ( $lengths as $l ) {
+								echo '<option value="' . esc_attr( $l ) . '" ' . selected( ( $settings['ds_length'] ?? '2500-3500 kelime' ), $l, false ) . '>' . esc_html( $l ) . '</option>';
+							}
+							?>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th>Kategori Başına Minimum Paragraf</th>
+					<td>
+						<input type="number" min="2" max="8" name="ds_min_paragraphs" value="<?php echo esc_attr( $settings['ds_min_paragraphs'] ?? 4 ); ?>" style="width:80px">
+					</td>
+				</tr>
+				<tr>
+					<th>Kullanıcıya Adıyla Hitap Et</th>
+					<td><label><input type="checkbox" name="ds_use_name" value="1" <?php checked( ! isset( $settings['ds_use_name'] ) || ! empty( $settings['ds_use_name'] ) ); ?>> Açık</label></td>
+				</tr>
+				<tr>
+					<th>Sonuçları Tek Tek Yorumla</th>
+					<td><label><input type="checkbox" name="ds_single_results" value="1" <?php checked( ! isset( $settings['ds_single_results'] ) || ! empty( $settings['ds_single_results'] ) ); ?>> Açık</label></td>
+				</tr>
+				<tr>
+					<th>Kategori Başlıkları Kullan</th>
+					<td><label><input type="checkbox" name="ds_use_headers" value="1" <?php checked( ! isset( $settings['ds_use_headers'] ) || ! empty( $settings['ds_use_headers'] ) ); ?>> Açık</label></td>
+				</tr>
+				<tr>
+					<th>Sonunda Farkındalık Önerileri Ekle</th>
+					<td><label><input type="checkbox" name="ds_add_tips" value="1" <?php checked( ! isset( $settings['ds_add_tips'] ) || ! empty( $settings['ds_add_tips'] ) ); ?>> Açık</label></td>
+				</tr>
+				<tr>
+					<th>Sağlık Uyarısı & Kesin Kader Dili Yasağı</th>
+					<td>
+						<p class="description"><strong>Sistem Kuralı:</strong> Bu kurallar AI prompt'una her zaman zorunlu olarak eklenir ve kapatılamaz. Tıbbi teşhis veya astrolojik/kader kesinliği içeren dil kullanımı yasaktır.</p>
+					</td>
+				</tr>
+				<tr>
+					<th>Ek Özel Sistem Talimatı</th>
+					<td>
+						<textarea name="ds_custom_prompt" class="large-text" rows="4" placeholder="Örn: Dost canlısı, sıcak, açıklayıcı ve kullanıcıyı yormayan bir dil kullan..."><?php echo esc_textarea( $settings['ds_custom_prompt'] ?? '' ); ?></textarea>
+						<p class="description">Admin isterse AI'ye ek stil veya içerik talimatı yazabilir. (Zorunlu güvenlik kurallarını geçersiz kılmaz.)</p>
+					</td>
+				</tr>
+			</table>
+			<?php submit_button( 'DeepSeek AI Ayarlarını Kaydet' ); ?>
+		</form>
+		<script>
+		jQuery(function($){
+			$('#hap-test-deepseek').on('click', function(){
+				var $btn = $(this);
+				var $res = $('#hap-test-deepseek-result');
+				$btn.prop('disabled', true).text('Bağlanıyor...');
+				$res.text('');
+				$.post(hapAdmin.ajaxUrl, {
+					action: 'hap_test_deepseek_connection',
+					nonce: hapAdmin.nonce
+				}, function(resp){
+					$btn.prop('disabled', false).text('Test Bağlantısı');
+					if(resp.success) {
+						$res.html('<span style="color:#00a32a">Bağlantı başarılı! (Süre: ' + resp.data.time + 's)</span>');
+					} else {
+						$res.html('<span style="color:#b32d2e">Hata: ' + (resp.data.message || 'Bilinmeyen hata') + '</span>');
+					}
+				}).fail(function(){
+					$btn.prop('disabled', false).text('Test Bağlantısı');
+					$res.html('<span style="color:#b32d2e">Sunucu ile iletişim kurulamadı.</span>');
+				});
+			});
+		});
+		</script>
+		<?php
+	}
+
+	public function ajax_test_deepseek_connection() {
+		check_ajax_referer( 'hap_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Yetkiniz yok.' ) );
+		}
+		
+		if ( ! class_exists( 'HAP_Profile_AI_Report' ) ) {
+			wp_send_json_error( array( 'message' => 'AI modülü yüklenmemiş.' ) );
+		}
+
+		$report_engine = new HAP_Profile_AI_Report();
+		$settings = $report_engine->get_settings();
+		
+		if ( empty( $settings['ds_api_key'] ) ) {
+			wp_send_json_error( array( 'message' => 'API Key ayarlanmamış. Önce kaydedin.' ) );
+		}
+		
+		$start_time = microtime( true );
+		$messages = array(
+			array(
+				'role' => 'system',
+				'content' => 'Sen sadece "OK" diyerek cevap veren bir test asistanısın. Bağlantıyı doğrulamak için "Bağlantı başarılı" yaz.'
+			),
+			array(
+				'role' => 'user',
+				'content' => 'Ping'
+			)
+		);
+		
+		$response = $report_engine->call_deepseek( $messages );
+		$duration = round( microtime( true ) - $start_time, 2 );
+
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error( array( 'message' => $response->get_error_message() ) );
+		}
+		
+		wp_send_json_success( array( 'message' => 'Success', 'time' => $duration ) );
 	}
 }

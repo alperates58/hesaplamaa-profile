@@ -12,6 +12,53 @@
 			this.initCopyButtons();
 			this.initResultFilters();
 			this.initAnalysisPanels();
+			this.initAI();
+		},
+
+		initAI: function() {
+			$(document).on('click', '#hap-generate-ai-btn', function() {
+				var $btn = $(this);
+				var $loading = $('#hap-ai-loading');
+				var $content = $('#hap-ai-report-content');
+				var force = $btn.data('force') ? 1 : 0;
+				
+				$btn.prop('disabled', true);
+				$loading.show();
+
+				$.post(hapProfile.ajaxUrl, {
+					action: 'hap_generate_ai_report',
+					nonce: hapProfile.nonce,
+					force_regenerate: force
+				}, function(res) {
+					$loading.hide();
+					if (res.success) {
+						var report = res.data.report;
+						// Basit markdown to HTML parse
+						report = report.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+						report = report.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+						report = report.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+						report = report.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+						report = report.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+						report = report.replace(/\n/gim, '<br>');
+						
+						var html = '<div class="hap-ai-result" style="text-align:left;line-height:1.6;font-size:1.05rem;">' + report + '</div>';
+						if (res.data.cached) {
+							html += '<p style="font-size:0.8rem;color:#888;margin-top:20px;text-align:center;">Önbellekten yüklendi.</p>';
+						}
+						html += '<div style="text-align:center;margin-top:30px;"><button class="hap-btn hap-btn-secondary" id="hap-generate-ai-btn" data-force="1">Yeniden Oluştur</button></div>';
+						
+						$content.html(html);
+					} else {
+						var msg = res.data && res.data.message ? res.data.message : 'Bir hata oluştu.';
+						alert('Hata: ' + msg);
+						$btn.prop('disabled', false);
+					}
+				}).fail(function() {
+					$loading.hide();
+					alert('Sunucu hatası.');
+					$btn.prop('disabled', false);
+				});
+			});
 		},
 
 		initFormTabs: function () {

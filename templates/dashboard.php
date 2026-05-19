@@ -1027,9 +1027,40 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 					<span class="screen-reader-text">Geli&#351;mi&#351; analiz motoru haz&#305;rlan&#305;yor.</span>
 					<div class="hap-analysis-panel-head">
 						<div>
-					<span class="hap-eyebrow">Geli&#351;mi&#351; Analizler</span>
-					<h2 class="hap-section-title">Geli&#351;mi&#351; Analizler</h2>
-					<p class="hap-section-copy">Bu analizler i&#231;in bilgiler haz&#305;r; geli&#351;mi&#351; analiz motoru haz&#305;rland&#305;&#287;&#305;nda burada g&#246;r&#252;necek.</p>
+				<section class="hap-analysis-panel" data-analysis-panel="ai" id="hap-analysis-panel-ai">
+					<div class="hap-section-heading" style="margin-bottom:1.5rem;">
+						<div>
+							<span class="hap-eyebrow">AI Kişisel Analiz</span>
+							<h2 class="hap-section-title">DeepSeek ile Kapsamlı Profil Yorumu</h2>
+							<p class="hap-section-copy">Profiline ve hazır olan tüm analiz sonuçlarına dayanarak, yapay zeka destekli detaylı kişisel analizini oluşturabilirsin.</p>
+						</div>
+					</div>
+
+					<div class="hap-ai-report-container" style="background:#fff;border:1px solid var(--hap-border);border-radius:12px;padding:2rem;">
+						<div class="hap-ai-report-content" id="hap-ai-report-content">
+							<div style="text-align:center;padding:2rem 0;">
+								<div style="font-size:3rem;margin-bottom:1rem;">🤖</div>
+								<h3 style="margin-bottom:0.5rem;font-size:1.25rem;">Analizin Hazır Bekliyor</h3>
+								<p style="color:var(--hap-text-light);margin-bottom:1.5rem;max-width:500px;margin-left:auto;margin-right:auto;">
+									AI asistanımız, tüm verilerini harmanlayarak sana özel, kapsamlı bir okuma hazırlayacak. 
+									<br><br>
+									<strong style="color:var(--hap-danger);">Önemli Not:</strong> Bu rapor tıbbi teşhis, tedavi veya kesin bir kader öngörüsü değildir.
+								</p>
+								<button type="button" class="hap-btn hap-btn-primary" id="hap-generate-ai-btn">AI Analizimi Oluştur</button>
+								<div class="hap-ai-loading" id="hap-ai-loading" style="display:none;margin-top:1rem;color:var(--hap-text-light);">
+									Analizin hazırlanıyor, lütfen bekleyin... <span class="hap-spinner"></span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="hap-analysis-panel" data-analysis-panel="advanced" id="hap-analysis-panel-advanced">
+					<div class="hap-section-heading">
+						<div>
+							<span class="hap-eyebrow">Geli&#351;mi&#351; Analizler</span>
+							<h2 class="hap-section-title">Geli&#351;mi&#351; Analizler</h2>
+							<p class="hap-section-copy">Bu analizler i&#231;in bilgiler haz&#305;r; geli&#351;mi&#351; analiz motoru haz&#305;rland&#305;&#287;&#305;nda burada g&#246;r&#252;necek.</p>
 						</div>
 						<span class="hap-status-pill hap-tool"><?php echo absint( count( $frontend_cards ) ); ?> analiz</span>
 					</div>

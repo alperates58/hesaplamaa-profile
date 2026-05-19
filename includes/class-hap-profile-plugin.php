@@ -52,6 +52,7 @@ class HAP_Profile_Plugin {
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-consents.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-ai-reports.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-ai-provider.php';
+		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-ai-report.php';
 		require_once HAP_PLUGIN_DIR . 'includes/class-hap-profile-module-bootstrap.php';
 
 		if ( HAP_Profile_Activator::should_run_migrations() ) {
@@ -104,6 +105,7 @@ class HAP_Profile_Plugin {
 		add_action( 'wp_ajax_hap_apply_suite_mapping', array( $this->admin, 'ajax_apply_suite_mapping' ) );
 		add_action( 'wp_ajax_hap_sync_suite_fields', array( $this->admin, 'ajax_sync_suite_fields' ) );
 		add_action( 'wp_ajax_hap_update_module_profile_status', array( $this->admin, 'ajax_update_module_profile_status' ) );
+		add_action( 'wp_ajax_hap_test_deepseek_connection', array( $this->admin, 'ajax_test_deepseek_connection' ) );
 
 		// Shortcode'lar
 		$this->render->register_shortcodes();
@@ -120,6 +122,9 @@ class HAP_Profile_Plugin {
 
 		// Final step — Beni sonuçlarıma götür
 		add_action( 'wp_ajax_hap_generate_profile_results', array( $this->onboarding, 'handle_generate_results' ) );
+		
+		// AI Kişisel Analiz
+		add_action( 'wp_ajax_hap_generate_ai_report', array( $this->render, 'handle_generate_ai_report' ) );
 	}
 
 	public function load_textdomain() {
