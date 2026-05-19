@@ -41,6 +41,42 @@ class HAP_Profile_AI_Report {
 		
 		// Map some readable names
 		$context = array();
+
+		// Name Resolution Logic
+		$first_name = $profile['first_name'] ?? get_user_meta( $user_id, 'first_name', true );
+		$last_name  = $profile['last_name'] ?? get_user_meta( $user_id, 'last_name', true );
+		$nickname   = $profile['nickname'] ?? get_user_meta( $user_id, 'nickname', true );
+		
+		$wp_user = get_userdata( $user_id );
+		$display_name = $wp_user ? $wp_user->display_name : '';
+
+		// Remove technical/role names
+		$forbidden = array( 'admin', 'administrator', 'site admin', 'yönetici' );
+		if ( in_array( strtolower( trim( $display_name ) ), $forbidden, true ) ) {
+			$display_name = '';
+		}
+
+		$preferred_name    = '';
+		$report_title_name = '';
+
+		if ( ! empty( $first_name ) ) {
+			$preferred_name = $first_name;
+			$report_title_name = ! empty( $last_name ) ? $first_name . ' ' . $last_name : $first_name;
+		} elseif ( ! empty( $nickname ) ) {
+			$preferred_name = $nickname;
+			$report_title_name = $nickname;
+		} elseif ( ! empty( $display_name ) ) {
+			$preferred_name = $display_name;
+			$report_title_name = $display_name;
+		} else {
+			// Absolute fallback
+			$preferred_name = ''; // Will result in just "Merhaba"
+			$report_title_name = 'Kullanıcı';
+		}
+
+		$context['preferred_name']    = $preferred_name;
+		$context['report_title_name'] = $report_title_name;
+
 		$context['Cinsiyet'] = isset( $profile['gender'] ) ? ( $profile['gender'] === 'female' ? 'Kadın' : 'Erkek' ) : 'Belirtilmedi';
 		
 		if ( ! empty( $profile['birth_date'] ) ) {
@@ -59,6 +95,12 @@ class HAP_Profile_AI_Report {
 		}
 		if ( ! empty( $profile['birth_place'] ) ) {
 			$context['Doğum Yeri'] = $profile['birth_place'];
+		}
+		if ( ! empty( $profile['current_city'] ) ) {
+			$context['Yaşadığı Şehir'] = $profile['current_city'];
+		}
+		if ( ! empty( $profile['relationship_status'] ) ) {
+			$context['İlişki Durumu'] = $profile['relationship_status'];
 		}
 		
 		return $context;
@@ -83,21 +125,30 @@ class HAP_Profile_AI_Report {
 		}
 
 		foreach ( $results as $slug => $result ) {
-			$section = 'Diğer';
+			// Skip results explicitly marked as not safe for AI report
+			if ( isset( $result['ai_safe_for_report'] ) && ! $result['ai_safe_for_report'] ) {
+				continue;
+			}
+
+			$section = 'Diğer Kişisel Sonuçlar';
 			$title   = $slug;
 			if ( isset( $module_map[ $slug ] ) ) {
-				$section = $module_map[ $slug ]['section'] ?: 'Diğer';
+				$section = $module_map[ $slug ]['section'] ?: 'Diğer Kişisel Sonuçlar';
 				$title   = $module_map[ $slug ]['title'];
 			}
 			
 			if ( ! isset( $categorized[ $section ] ) ) {
 				$categorized[ $section ] = array();
 			}
+			
 			$categorized[ $section ][] = array(
-				'title' => $title,
-				'value' => $result['value'] ?? '',
-				'unit'  => $result['unit'] ?? '',
-				'label' => $result['label'] ?? '',
+				'title'   => $title,
+				'value'   => $result['value'] ?? '',
+				'unit'    => $result['unit'] ?? '',
+				'label'   => $result['label'] ?? '',
+				'summary' => $result['summary'] ?? '',
+				'status'  => $result['status'] ?? '',
+				'meaning' => $result['meaning'] ?? '',
 			);
 		}
 		
@@ -107,67 +158,78 @@ class HAP_Profile_AI_Report {
 	public function get_result_hash( $user_id, $profile, $categorized_results ) {
 		// Create a hash based on the input data that matters
 		$data = array(
-			'profile' => $profile,
-			'results' => $categorized_results,
+			'prompt_version' => 'v2', // Increment this if prompt structure changes significantly to invalidate old cache
+			'profile'        => $profile,
+			'results'        => $categorized_results,
 		);
 		return md5( wp_json_encode( $data ) );
 	}
 
 	public function build_prompt( $user_id, $profile, $categorized_results, $settings ) {
-		$user_info = get_userdata( $user_id );
-		$name = $settings['ds_use_name'] ? ( $user_info->first_name ?: $user_info->display_name ) : 'Kullanıcı';
+		$preferred_name    = $profile['preferred_name'] ?? 'Kullanıcı';
+		$report_title_name = $profile['report_title_name'] ?? 'Kullanıcı';
 
-		$system_prompt = "Sen Hesaplamaa.com kişisel analiz asistanısın. Sana verilen deterministic hesaplama sonuçlarını yorumlarsın. Yeni hesaplama yapmazsın, veri uydurmazsın, tıbbi teşhis veya tedavi önerisi vermezsin, kesin kader yorumu yapmazsın. Türkçe, güvenli, anlaşılır ve kullanıcı dostu yazarsın.\n";
+		$system_prompt = "Sen Hesaplamaa.com için çalışan, profesyonel, bilge ve empatik bir kişisel analiz danışmanısın.\n";
+		$system_prompt .= "Görevin: Sana verilen deterministic hesaplama sonuçlarını (Astroloji, Numeroloji, Sağlık, Tarot vb.) profesyonel bir dille YORUMLAMAKTIR.\n\n";
 		
-		$system_prompt .= "\nKurallar:\n";
-		$system_prompt .= "- Sağlık bölümünde mutlaka şu cümle yer alsın: 'Bu bölüm bilgilendirme amaçlıdır; tıbbi teşhis veya tedavi önerisi değildir.'\n";
-		$system_prompt .= "- Astroloji, numeroloji veya sembolik alanlarda 'Kesin böylesin', 'mutlaka olacak', 'kaderinde var' gibi kesin kader dili kullanma.\n";
-		$system_prompt .= "- Hesaplama yapma.\n";
-		$system_prompt .= "- Sadece sana verilen sonuçları yorumla, verilmeyen sonucu uydurma.\n";
-		
+		$system_prompt .= "KATI KURALLAR:\n";
+		$system_prompt .= "1. Tıbbi teşhis yok: Sağlık bölümünde hastalık iddiasında bulunma, ilaç önerme. Mutlaka şu cümleyi geçir: 'Bu bölüm bilgilendirme amaçlıdır; tıbbi teşhis veya tedavi önerisi değildir.'\n";
+		$system_prompt .= "2. Kesin kader dili yok: 'Kesin böylesin', 'mutlaka olacak' gibi ifadeler kullanma. 'Öne çıkabilir', 'potansiyelin var' gibi yumuşak ifadeler kullan.\n";
+		$system_prompt .= "3. Ham tablo/liste tekrarı YASAK: Sonuçları kopyalayıp mekanik liste halinde sunma. Sonuçları birbirine bağla, ortak temalar çıkar ve anlamlı paragraflar halinde yaz.\n";
+		$system_prompt .= "4. Veri uydurma: Sadece sana verilen sonuçları yorumla.\n";
+		$system_prompt .= "5. Hesaplama yapma: Mevcut sonuçlar üzerinden yorum yap.\n";
+
 		if ( ! empty( $settings['ds_custom_prompt'] ) ) {
-			$system_prompt .= "\nEk Talimatlar:\n" . $settings['ds_custom_prompt'] . "\n";
+			$system_prompt .= "\nÖzel Sistem Talimatları (Admin):\n" . $settings['ds_custom_prompt'] . "\n";
 		}
 
-		$user_prompt = "Aşağıdaki profile ve hazır hesaplama sonuçlarına dayanarak detaylı bir kişisel analiz raporu oluştur.\n\n";
+		$user_prompt = "Lütfen aşağıdaki profil verileri ve hesaplama sonuçları ışığında $preferred_name için kapsamlı, sıcak ve profesyonel bir kişisel analiz raporu hazırla.\n\n";
 		
-		// Yazım Ayarları
-		$user_prompt .= "Yazım Ayarları:\n";
-		$user_prompt .= "- Ton: " . $settings['ds_tone'] . "\n";
-		$user_prompt .= "- Detay Seviyesi: " . $settings['ds_detail'] . " (Yüzeysel özet geçme, her kategori için açıklayıcı paragraflar yaz.)\n";
-		$user_prompt .= "- Hedef Uzunluk: " . $settings['ds_length'] . "\n";
-		if ( $settings['ds_use_name'] ) {
-			$user_prompt .= "- Kullanıcıya adıyla hitap et (Adı: $name).\n";
-		}
-		if ( $settings['ds_single_results'] ) {
-			$user_prompt .= "- Her kategorideki sonuçları (en az 3-5 tanesini) birbirine bağlayarak detaylıca yorumla.\n";
-		}
-		if ( $settings['ds_use_headers'] ) {
-			$user_prompt .= "- Rapor iskeletini ve Kategori başlıklarını belirgin kullan.\n";
-		}
-		if ( $settings['ds_add_tips'] ) {
-			$user_prompt .= "- Raporun sonunda uygulanabilir farkındalık önerileri ekle.\n";
-		}
+		$user_prompt .= "YAZIM VE FORMAT AYARLARI:\n";
+		$user_prompt .= "- Ton: " . ( $settings['ds_tone'] ?? 'Dost canlısı ve profesyonel' ) . "\n";
+		$user_prompt .= "- Detay Seviyesi: " . ( $settings['ds_detail'] ?? 'Çok detaylı' ) . " (Yüzeysel özet geçme. Rakamların, gezegenlerin, sembollerin ne anlama geldiğini ve kişinin hayatına etkisini derinlemesine anlat.)\n";
+		$user_prompt .= "- Uzunluk: " . ( $settings['ds_length'] ?? 'Uzun' ) . "\n";
 		
-		$user_prompt .= "\nRapor İskeleti:\n";
-		$user_prompt .= "1. Giriş\n2. Genel Profil Özeti\n3. [Kategoriler]\n4. Güçlü Temalar\n5. Dikkat Edilebilecek Noktalar\n6. Kapanış ve Farkındalık Önerileri\n\n";
+		if ( ! empty( $settings['ds_use_name'] ) ) {
+			$user_prompt .= "- Başlık Formatı: \"$report_title_name için Kişisel Analiz Raporu\" şeklinde başla.\n";
+			$user_prompt .= "- Hitap: Girişte ve raporun içinde ara ara \"$preferred_name\" diyerek kişiye ismen hitap et.\n";
+		}
 
-		// Profil verisi
+		$user_prompt .= "- Format: Markdown kullan. Bölüm başlıklarında mutlaka ikon/emoji kullan (Örn: ✨ Genel Tema, 🌙 Astroloji, 🔢 Numeroloji, 💚 Sağlık, 🏃 Aktivite, 🧭 Yol Haritası).\n";
+
+		$user_prompt .= "\nRAPOR İSKELETİ BEKLENTİSİ:\n";
+		$user_prompt .= "1. Giriş: Sıcak karşılama.\n";
+		$user_prompt .= "2. ✨ Genel Tema Haritası: Çıkan sonuçların tümüne bakarak kişide baskın olan 3-5 ana temayı (örn: duygusal derinlik, dönüşüm gücü vs.) tespit edip yorumla.\n";
+		$user_prompt .= "3. [Kategoriler]: Astroloji, Numeroloji, Sembolik, İlişki, Sağlık, Aktivite vb. sana verilen kategorileri sırayla, birbirleriyle bağ kurarak, paragraf paragraf yorumla.\n";
+		$user_prompt .= "4. 🧭 Yol Haritası & Farkındalık: Küçük pratik alışkanlık önerileri ve içsel farkındalık sorularıyla kapanış.\n\n";
+
+		$user_prompt .= "--- VERİLER ---\n\n";
+		
 		$user_prompt .= "Kullanıcı Profili:\n";
 		foreach ( $profile as $k => $v ) {
+			if ( in_array( $k, array( 'first_name', 'last_name', 'nickname', 'preferred_name', 'report_title_name' ), true ) ) {
+				continue; // Skip raw names in prompt body, we already used them in instructions
+			}
 			$user_prompt .= "- $k: $v\n";
 		}
 		
-		// Sonuçlar
-		$user_prompt .= "\nHazır Sonuçlar:\n";
-		foreach ( $categorized_results as $section => $results ) {
-			$user_prompt .= "### Kategori: $section\n";
-			foreach ( $results as $r ) {
-				$val = $r['value'] . ( $r['unit'] ? ' ' . $r['unit'] : '' );
-				$user_prompt .= "- " . $r['title'] . ": " . $val . " (" . $r['label'] . ")\n";
+		$user_prompt .= "\nHazır Hesaplama Sonuçları:\n";
+		if ( empty( $categorized_results ) ) {
+			$user_prompt .= "(Henüz yeterli sonuç yok. Profil bilgilerine dayanarak genel bir yorum yap.)\n";
+		} else {
+			foreach ( $categorized_results as $section => $results ) {
+				$user_prompt .= "Kategori: [$section]\n";
+				foreach ( $results as $r ) {
+					$val     = $r['value'] . ( $r['unit'] ? ' ' . $r['unit'] : '' );
+					$summary = ! empty( $r['summary'] ) ? ' - Özet: ' . $r['summary'] : '';
+					$meaning = ! empty( $r['meaning'] ) ? ' - Anlamı: ' . $r['meaning'] : '';
+					$user_prompt .= "  • " . $r['title'] . ": " . $val . " (" . $r['label'] . ")" . $summary . $meaning . "\n";
+				}
+				$user_prompt .= "\n";
 			}
-			$user_prompt .= "\n";
 		}
+
+		$user_prompt .= "\nLütfen şimdi raporu yazmaya başla.";
 
 		return array(
 			array( 'role' => 'system', 'content' => $system_prompt ),

@@ -49,16 +49,19 @@ class HAP_Profile_Render {
 			return '<p class="hap-notice">' . esc_html__( 'Profil sistemi su an aktif degil.', 'hesaplamaa-profile' ) . '</p>';
 		}
 
+		$share_token = isset( $_GET['share'] ) ? sanitize_text_field( wp_unslash( $_GET['share'] ) ) : '';
+		$legacy_share = isset( $_GET['hap_share'] ) ? sanitize_text_field( wp_unslash( $_GET['hap_share'] ) ) : '';
+		$token_to_use = $share_token ?: $legacy_share;
+
+		if ( $token_to_use ) {
+			return $this->render_public_profile_by_token( $token_to_use );
+		}
+
 		if ( ! is_user_logged_in() ) {
 			return $this->render_login_prompt();
 		}
 
 		$user_id = get_current_user_id();
-
-		$share_token = isset( $_GET['share'] ) ? sanitize_text_field( wp_unslash( $_GET['share'] ) ) : '';
-		if ( $share_token ) {
-			return $this->render_public_profile_by_token( $share_token );
-		}
 
 		if ( ! HAP_Profile_Fields::is_minimum_profile_complete( $user_id ) || ! $this->onboarding->are_required_steps_complete( $user_id ) ) {
 			return $this->render_onboarding_for_user( $user_id );
@@ -195,6 +198,11 @@ class HAP_Profile_Render {
 				'label'       => 'Sembolik Profil',
 				'icon'        => '🔮',
 				'description' => 'Sembolik yorum ve sezgisel profil kartları.',
+			),
+			'ai_report'         => array(
+				'label'       => 'AI Kişisel Analiz',
+				'icon'        => '🤖',
+				'description' => 'Gelişmiş yapay zeka analiz raporunuz.',
 			),
 			'tarot'             => array(
 				'label'       => 'Tarot',

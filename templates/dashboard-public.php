@@ -73,6 +73,36 @@ $visible      = ! empty( $visible_sections ) ? $visible_sections : array_keys( $
 		<?php endforeach; ?>
 	</div>
 
+	<?php
+	if ( in_array( 'ai_report', $visible, true ) ) {
+		$ai_status  = get_user_meta( $share_data['user_id'], '_hap_ai_report_status', true );
+		$ai_content = get_user_meta( $share_data['user_id'], '_hap_ai_report_content', true );
+		if ( 'completed' === $ai_status && ! empty( $ai_content ) ) {
+			// Simple markdown to HTML
+			$report_html = htmlspecialchars( $ai_content, ENT_QUOTES, 'UTF-8' );
+			$report_html = preg_replace( '/^### (.*?)$/m', '<h4>$1</h4>', $report_html );
+			$report_html = preg_replace( '/^## (.*?)$/m', '<h3>$1</h3>', $report_html );
+			$report_html = preg_replace( '/^# (.*?)$/m', '<h2>$1</h2>', $report_html );
+			$report_html = preg_replace( '/\*\*(.*?)\*\*/', '<strong>$1</strong>', $report_html );
+			$report_html = preg_replace( '/\*(.*?)\*/', '<em>$1</em>', $report_html );
+			$report_html = nl2br( $report_html );
+			?>
+			<div class="hap-ai-report-container" style="background:#fff;border:1px solid var(--hap-border);border-radius:12px;padding:2rem;margin-top:2rem;">
+				<div class="hap-section-heading" style="margin-bottom:1.5rem;">
+					<div>
+						<h2 class="hap-section-title">Hesaplamaa AI Analiz</h2>
+						<p class="hap-section-copy">Yapay zeka destekli detaylı kişisel analiz raporu.</p>
+					</div>
+				</div>
+				<div class="hap-ai-result" style="text-align:left;line-height:1.6;font-size:1.05rem;">
+					<?php echo $report_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				</div>
+			</div>
+			<?php
+		}
+	}
+	?>
+
 	<div class="hap-public-footer">
 		<p>Bu profil <a href="<?php echo esc_url( home_url( '/' ) ); ?>">hesaplamaa.com</a> tarafından oluşturulmuştur.</p>
 		<p class="hap-disclaimer">Astroloji, numeroloji ve sembolik analizler eğlence ve kişisel farkındalık amaçlıdır.</p>
