@@ -948,86 +948,10 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 					</section>
 				<?php endforeach; ?>
 
-				<section class="hap-analysis-panel hap-ai-section" data-analysis-panel="ai" id="hap-analysis-panel-ai">
-					<div class="hap-analysis-panel-head">
-						<div>
-							<span class="hap-eyebrow">Yapay Zeka</span>
-					<h2 class="hap-section-title">AI Ki&#351;isel Analiz</h2>
-					<p class="hap-section-copy">Mevcut AI yorum katman&#305; ve durum ak&#305;&#351;&#305; bu panelde korunur.</p>
-						</div>
-					</div>
-
-					<?php if ( 'completed' === $ai_display_status && $ai_report ) : ?>
-						<div class="hap-ai-report-card">
-							<?php if ( ! empty( $ai_report['summary'] ) ) : ?>
-								<div class="hap-ai-summary">
-									<p><?php echo esc_html( $ai_report['summary'] ); ?></p>
-								</div>
-							<?php endif; ?>
-
-							<?php if ( ! empty( $ai_report['sections'] ) ) : ?>
-								<div class="hap-ai-tabs">
-									<div class="hap-ai-tab-nav" role="tablist">
-										<?php $first_tab = true; ?>
-										<?php foreach ( $ai_report['sections'] as $sec_key => $sec_content ) : ?>
-											<?php if ( '' === $sec_content ) { continue; } ?>
-											<button type="button" class="hap-ai-tab-btn <?php echo $first_tab ? 'is-active' : ''; ?>" role="tab" data-ai-tab="<?php echo esc_attr( $sec_key ); ?>">
-												<?php echo esc_html( ucwords( str_replace( '_', ' ', $sec_key ) ) ); ?>
-											</button>
-											<?php $first_tab = false; ?>
-										<?php endforeach; ?>
-									</div>
-									<?php $first_panel = true; ?>
-									<?php foreach ( $ai_report['sections'] as $sec_key => $sec_content ) : ?>
-										<?php if ( '' === $sec_content ) { continue; } ?>
-										<div class="hap-ai-tab-panel <?php echo $first_panel ? 'is-active' : ''; ?>" role="tabpanel" data-ai-panel="<?php echo esc_attr( $sec_key ); ?>">
-											<div class="hap-ai-panel-body">
-												<?php echo wp_kses_post( wpautop( $sec_content ) ); ?>
-											</div>
-										</div>
-										<?php $first_panel = false; ?>
-									<?php endforeach; ?>
-								</div>
-							<?php endif; ?>
-
-							<?php if ( ! empty( $ai_report['full_report'] ) && empty( $ai_report['sections'] ) ) : ?>
-								<div class="hap-ai-full-report">
-									<?php echo wp_kses_post( wpautop( $ai_report['full_report'] ) ); ?>
-								</div>
-							<?php endif; ?>
-
-					<p class="hap-disclaimer" style="font-size:.78rem;color:#888;margin-top:16px">Bu analiz yaln&#305;zca bilgilendirme ama&#231;l&#305;d&#305;r. T&#305;bbi, finansal veya hukuki tavsiye niteli&#287;i ta&#351;&#305;maz.</p>
-						</div>
-					<?php elseif ( 'processing' === $ai_display_status ) : ?>
-						<div class="hap-ai-report-card hap-ai-report-card--processing">
-							<div class="hap-ai-loader"></div>
-					<p><strong>Analizin haz&#305;rlan&#305;yor...</strong></p>
-					<p style="color:#888">Bu i&#351;lem birka&#231; dakika s&#252;rebilir. Sayfay&#305; yenileyerek g&#252;ncel durumu kontrol edebilirsin.</p>
-					<button type="button" class="hap-btn hap-btn-secondary" onclick="location.reload()">Sayfay&#305; yenile</button>
-						</div>
-					<?php elseif ( 'consent_required' === $ai_display_status ) : ?>
-						<div class="hap-ai-report-card hap-ai-report-card--consent">
-					<p><strong>AI analizi i&#231;in a&#231;&#305;k r&#305;zan gerekiyor.</strong></p>
-					<p style="color:#888">Yapay zeka destekli ki&#351;isel analiz raporunu g&#246;rmek i&#231;in AI i&#351;leme onay&#305;n&#305; vermelisin.</p>
-							<a href="<?php echo esc_url( add_query_arg( 'step', 'account_consents', $current_page_url ) ); ?>" class="hap-btn hap-btn-primary">Onay ver</a>
-						</div>
-					<?php elseif ( 'pending_configuration' === $ai_display_status ) : ?>
-						<div class="hap-ai-report-card hap-ai-report-card--pending">
-					<p><strong>AI yorum katman&#305; yak&#305;nda aktif olacak.</strong></p>
-					<p style="color:#888">Ki&#351;isel analiz raporu haz&#305;rland&#305;&#287;&#305;nda burada g&#246;r&#252;necek.</p>
-						</div>
-					<?php else : ?>
-						<div class="hap-ai-report-card hap-ai-report-card--disabled">
-					<p><strong>AI yorum katman&#305; yak&#305;nda aktif olacak.</strong></p>
-						</div>
-					<?php endif; ?>
-				</section>
-
 				<section class="hap-analysis-panel" data-analysis-panel="ai" id="hap-analysis-panel-ai">
 					<div class="hap-section-heading" style="margin-bottom:1.5rem;">
 						<div>
-							<span class="hap-eyebrow">AI Kişisel Analiz</span>
-							<h2 class="hap-section-title">DeepSeek ile Kapsamlı Profil Yorumu</h2>
+							<h2 class="hap-section-title">Hesaplamaa AI Analiz</h2>
 							<p class="hap-section-copy">Profiline ve hazır olan tüm analiz sonuçlarına dayanarak, yapay zeka destekli detaylı kişisel analizini oluşturabilirsin.</p>
 						</div>
 					</div>
@@ -1050,7 +974,7 @@ if ( ! function_exists( 'hc_get_vki_pill' ) ) {
 									<div class="hap-ai-consent-box" style="margin-bottom:1.5rem;text-align:left;background:#f9fafb;padding:1rem;border-radius:8px;border:1px solid #e5e7eb;max-width:500px;margin-left:auto;margin-right:auto;">
 										<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--hap-text);">
 											<input type="checkbox" id="hap-ai-consent-checkbox" style="margin-top:3px;">
-											<span>Verilerimin (profil bilgilerim ve analiz sonuçlarım) kişisel analiz raporu oluşturulması amacıyla yapay zeka servisine (DeepSeek) aktarılmasını ve işlenmesini açık rızam ile kabul ediyorum.</span>
+											<span>Verilerimin (profil bilgilerim ve analiz sonuçlarım) kişisel analiz raporu oluşturulması amacıyla yapay zeka servisine aktarılmasını ve işlenmesini açık rızam ile kabul ediyorum.</span>
 										</label>
 									</div>
 									<button type="button" class="hap-btn hap-btn-primary" id="hap-generate-ai-btn" disabled style="opacity:0.6;cursor:not-allowed;">AI Analizimi Oluştur</button>
