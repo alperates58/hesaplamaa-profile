@@ -22,8 +22,22 @@ class HAP_Profile_AI_Report {
 	}
 
 	public function collect_profile_context( $user_id ) {
-		$user_data = new HAP_Profile_User_Data( $user_id );
-		$profile   = $user_data->get_all_fields();
+		try {
+			if ( ! class_exists( 'HAP_Profile_Fields' ) || ! class_exists( 'HAP_Profile_User_Data' ) ) {
+				return new WP_Error( 'missing_classes', 'Profil verileri okunamadı. Lütfen daha sonra tekrar deneyin.' );
+			}
+			$fields_obj = new HAP_Profile_Fields();
+			$user_data  = new HAP_Profile_User_Data( $fields_obj );
+			$profile    = $user_data->get_user_profile_data( $user_id );
+		} catch ( Exception $e ) {
+			return new WP_Error( 'profile_error', 'Profil verileri okunamadı. Lütfen daha sonra tekrar deneyin.' );
+		} catch ( Error $e ) {
+			return new WP_Error( 'profile_error', 'Profil verileri okunamadı. Lütfen daha sonra tekrar deneyin.' );
+		}
+		
+		if ( ! is_array( $profile ) ) {
+			$profile = array();
+		}
 		
 		// Map some readable names
 		$context = array();
@@ -214,6 +228,11 @@ class HAP_Profile_AI_Report {
 
 		$settings = $this->get_settings();
 		$profile = $this->collect_profile_context( $user_id );
+		
+		if ( is_wp_error( $profile ) ) {
+			return $profile;
+		}
+		
 		$results = $this->collect_ready_results( $user_id );
 		$categorized = $this->categorize_results( $results );
 
